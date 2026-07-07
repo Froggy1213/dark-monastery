@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тёмный Монастырь — Dark Fantasy RPG</title>
+  <meta name="description" content="Тёмный Монастырь — текстовая Dark Fantasy RPG с ИИ-мастером. Исследуй мрачные подземелья, сражайся с тварями и раскрой тайны монастыря.">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <!-- Particle system canvas -->
+  <canvas id="particleCanvas"></canvas>
+
+  <!-- Atmospheric layers -->
+  <div class="atmosphere">
+    <div class="candlelight"></div>
+    <div class="mist"></div>
+    <div class="mist mist--slow"></div>
+    <div class="vignette"></div>
+  </div>
+
+  <!-- Ambient rune circle -->
+  <svg class="rune-circle" viewBox="0 0 500 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="250" cy="250" r="220" stroke="rgba(200,169,110,0.6)" stroke-width="0.5"/>
+    <circle cx="250" cy="250" r="200" stroke="rgba(200,169,110,0.4)" stroke-width="0.3"/>
+    <circle cx="250" cy="250" r="240" stroke="rgba(200,169,110,0.3)" stroke-width="0.3"/>
+    <!-- Rune marks -->
+    <text x="250" y="45" text-anchor="middle" fill="rgba(200,169,110,0.5)" font-size="18" font-family="serif">ᚠ</text>
+    <text x="430" y="145" text-anchor="middle" fill="rgba(200,169,110,0.5)" font-size="18" font-family="serif">ᚦ</text>
+    <text x="470" y="270" text-anchor="middle" fill="rgba(200,169,110,0.5)" font-size="18" font-family="serif">ᚱ</text>
+    <text x="400" y="420" text-anchor="middle" fill="rgba(200,169,110,0.5)" font-size="18" font-family="serif">ᚲ</text>
+    <text x="250" y="475" text-anchor="middle" fill="rgba(200,169,110,0.5)" font-size="18" font-family="serif">ᚺ</text>
+    <text x="100" y="420" text-anchor="middle" fill="rgba(200,169,110,0.5)" font-size="18" font-family="serif">ᛁ</text>
+    <text x="30" y="270" text-anchor="middle" fill="rgba(200,169,110,0.5)" font-size="18" font-family="serif">ᛃ</text>
+    <text x="70" y="145" text-anchor="middle" fill="rgba(200,169,110,0.5)" font-size="18" font-family="serif">ᛈ</text>
+    <!-- Inner pentagram lines -->
+    <line x1="250" y1="50" x2="450" y2="330" stroke="rgba(200,169,110,0.15)" stroke-width="0.3"/>
+    <line x1="450" y1="330" x2="100" y2="200" stroke="rgba(200,169,110,0.15)" stroke-width="0.3"/>
+    <line x1="100" y1="200" x2="400" y2="200" stroke="rgba(200,169,110,0.15)" stroke-width="0.3"/>
+    <line x1="400" y1="200" x2="50" y2="330" stroke="rgba(200,169,110,0.15)" stroke-width="0.3"/>
+    <line x1="50" y1="330" x2="250" y2="50" stroke="rgba(200,169,110,0.15)" stroke-width="0.3"/>
+  </svg>
+
+  <!-- Main container -->
+  <div class="game-container" id="gameContainer">
+
+    <!-- Header -->
+    <header class="header">
+      <h1 class="header__title" id="headerTitle">Тёмный Монастырь</h1>
+      <p class="header__subtitle">Dark Fantasy RPG</p>
+      <div class="header__ornament">❧</div>
+    </header>
+
+    <!-- Main layout -->
+    <main class="main-layout">
+
+      <!-- Stat panel -->
+      <aside class="stat-panel" id="statPanel">
+        <div class="stat-panel__section">
+          <div class="stat-label">Локация</div>
+          <div class="stat-value stat-value--location" id="statLocation">—</div>
+        </div>
+
+        <div class="stat-panel__section">
+          <div class="stat-label">Состояние</div>
+          <div class="stat-value" id="statCondition">—</div>
+        </div>
+
+        <div class="stat-panel__section">
+          <div class="stat-label">Здоровье</div>
+          <div class="hp-bar-container">
+            <div class="hp-bar" id="hpBar" style="width:100%"></div>
+            <span class="hp-text" id="hpText">—</span>
+          </div>
+        </div>
+
+        <div class="stat-panel__section">
+          <div class="stat-label">Мана</div>
+          <div class="mana-bar-container">
+            <div class="mana-bar" id="manaBar" style="width:0%"></div>
+            <span class="mana-text" id="manaText">0</span>
+          </div>
+        </div>
+
+        <div class="stat-panel__section">
+          <div class="stat-label">Рассудок</div>
+          <div class="sanity-indicator">
+            <span class="sanity-icon" id="sanityIcon">🜏</span>
+            <div class="stat-value" id="statSanity">—</div>
+          </div>
+        </div>
+
+        <div class="stat-panel__divider"></div>
+
+        <div class="stat-panel__section">
+          <div class="stat-label">Золото</div>
+          <div class="stat-value stat-value--gold" id="statGold">0</div>
+        </div>
+
+        <div class="stat-panel__section">
+          <div class="stat-label">Экипировано</div>
+          <div class="stat-value" id="statEquipped">—</div>
+        </div>
+
+        <div class="stat-panel__divider"></div>
+
+        <div class="stat-panel__section">
+          <div class="stat-label">Инвентарь</div>
+          <ul class="stat-list" id="statInventory"></ul>
+        </div>
+
+        <div class="stat-panel__section">
+          <div class="stat-label">Навыки</div>
+          <ul class="stat-list" id="statSkills"></ul>
+        </div>
+
+        <div class="stat-panel__divider"></div>
+
+        <div class="stat-panel__section">
+          <div class="stat-label">Квесты</div>
+          <ul class="stat-list" id="statQuests"></ul>
+        </div>
+      </aside>
+
+      <!-- Story + input -->
+      <section class="story-area">
+        <!-- Story log -->
+        <div class="story-log" id="storyLog">
+          <div class="story-log__inner" id="storyInner">
+            <p class="story-placeholder">⏳ Пробуждение...</p>
+          </div>
+        </div>
+
+        <!-- Thinking indicator -->
+        <div class="thinking-indicator" id="thinkingIndicator">
+          <span class="thinking-dot"></span>
+          <span class="thinking-dot"></span>
+          <span class="thinking-dot"></span>
+          <span class="thinking-text">Мастер думает...</span>
+        </div>
+
+        <!-- Action input -->
+        <form class="input-area" id="actionForm" autocomplete="off">
+          <span class="input-prompt">❯</span>
+          <input
+            type="text"
+            class="input-field"
+            id="actionInput"
+            placeholder="Опиши своё действие..."
+            autofocus
+          >
+          <button type="submit" class="input-submit" id="btnSubmit" title="Отправить">↵</button>
+        </form>
+
+        <!-- Command buttons -->
+        <div class="command-buttons">
+          <button class="cmd-btn cmd-btn--danger" id="btnNewGame">Новая игра</button>
+          <button class="cmd-btn" id="btnSave">Сохранить</button>
+          <button class="cmd-btn" id="btnLoad">Загрузить</button>
+        </div>
+
+        <!-- Saves modal -->
+        <div class="modal-overlay" id="savesModal" hidden>
+          <div class="modal">
+            <h2 class="modal__title">Свитки Сохранений</h2>
+            <div class="modal__body" id="savesList"></div>
+            <button class="cmd-btn modal__close" id="btnCloseModal">Закрыть</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="/static/effects.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

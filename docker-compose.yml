@@ -1,0 +1,18 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: darkmonastery-db
+    environment:
+      POSTGRES_DB: darkmonastery
+      POSTGRES_USER: darkmonastery
+      POSTGRES_PASSWORD: darkmonastery
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:
