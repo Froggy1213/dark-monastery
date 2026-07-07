@@ -1,5 +1,8 @@
 package game
 
+// DefaultPlayerName — имя игрока по умолчанию для новых сохранений.
+const DefaultPlayerName = "Игрок"
+
 // GameState описывает текущее состояние игрока и мира.
 // Именно этот объект мы сериализуем в JSON для ИИ и парсим обратно.
 type GameState struct {

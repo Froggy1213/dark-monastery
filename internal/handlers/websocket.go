@@ -1,13 +1,10 @@
 package handlers
 
 import (
-	"context"
 	"log"
 	"net/http"
 
-	"dark-monastery/internal/ai"
 	"dark-monastery/internal/game"
-	"dark-monastery/internal/memory"
 	"dark-monastery/internal/storage"
 
 	"github.com/gorilla/websocket"
@@ -111,7 +108,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			// Автосохранение (файловое)
 			meta := &storage.SaveMeta{
 				SessionID:  sessionID,
-				PlayerName: "Игрок",
+				PlayerName: game.DefaultPlayerName,
 				Location:   newState.Location,
 				TurnCount:  sess.TurnCount,
 			}
@@ -135,10 +132,3 @@ func writeWS(conn *websocket.Conn, resp wsResponse) {
 		log.Printf("Ошибка отправки WebSocket: %v", err)
 	}
 }
-
-// Suppress unused import warnings — these are used transitively via Server methods
-var (
-	_ = (*ai.GeminiClient)(nil)
-	_ = (*memory.MemoryManager)(nil)
-	_ context.Context
-)

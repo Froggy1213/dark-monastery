@@ -6,13 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-)
 
-// TurnRecord — запись одного хода для сохранения в файл.
-type TurnRecord struct {
-	PlayerAction string `json:"player_action"`
-	AIResponse   string `json:"ai_response"`
-}
+	"dark-monastery/internal/memory"
+)
 
 // FileStore — файловое хранилище игровых сессий в JSON.
 type FileStore struct {
@@ -40,7 +36,7 @@ func (s *FileStore) Save(sessionID string, state interface{}, meta *SaveMeta) er
 }
 
 // SaveWithHistory сохраняет состояние и историю ходов в JSON-файл.
-func (s *FileStore) SaveWithHistory(sessionID string, state interface{}, meta *SaveMeta, history []TurnRecord) error {
+func (s *FileStore) SaveWithHistory(sessionID string, state interface{}, meta *SaveMeta, history []memory.TurnRecord) error {
 	meta.UpdatedAt = time.Now()
 	meta.SessionID = sessionID
 
@@ -75,7 +71,7 @@ func (s *FileStore) Load(sessionID string, state interface{}) (*SaveMeta, error)
 }
 
 // LoadWithHistory загружает состояние и историю ходов из JSON-файла.
-func (s *FileStore) LoadWithHistory(sessionID string, state interface{}) (*SaveMeta, []TurnRecord, error) {
+func (s *FileStore) LoadWithHistory(sessionID string, state interface{}) (*SaveMeta, []memory.TurnRecord, error) {
 	savePath := filepath.Join(s.saveDir, sessionID+".json")
 	data, err := os.ReadFile(savePath)
 	if err != nil {
@@ -140,7 +136,7 @@ func (s *FileStore) Delete(sessionID string) error {
 
 // saveFile — структура для хранения в JSON-файле.
 type saveFile struct {
-	Meta    *SaveMeta    `json:"meta"`
-	State   interface{}  `json:"state"`
-	History []TurnRecord `json:"history,omitempty"`
+	Meta    *SaveMeta           `json:"meta"`
+	State   interface{}         `json:"state"`
+	History []memory.TurnRecord `json:"history,omitempty"`
 }
