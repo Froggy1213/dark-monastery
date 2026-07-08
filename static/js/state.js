@@ -1,6 +1,6 @@
 /**
- * Тёмный Монастырь — Game State Module
- * ======================================
+ * Dark Monastery — Game State Module
+ * ===================================
  * Central state management: session, turn counter, thinking flag.
  * Exposes window.GameState for cross-module access.
  */

@@ -16,13 +16,13 @@ const (
 	embeddingDim   = 768
 )
 
-// EmbeddingClient генерирует эмбеддинги текста через Gemini Embedding API.
+// EmbeddingClient generates text embeddings via the Gemini Embedding API.
 type EmbeddingClient struct {
 	apiKey     string
 	httpClient *http.Client
 }
 
-// NewEmbeddingClient создаёт клиент для генерации эмбеддингов.
+// NewEmbeddingClient creates a client for generating embeddings.
 func NewEmbeddingClient(apiKey string) *EmbeddingClient {
 	return &EmbeddingClient{
 		apiKey:     apiKey,
@@ -30,7 +30,7 @@ func NewEmbeddingClient(apiKey string) *EmbeddingClient {
 	}
 }
 
-// --- Типы запроса/ответа ---
+// --- Request/response types ---
 
 type embedRequest struct {
 	Model                string       `json:"model"`
@@ -54,11 +54,11 @@ type embedResult struct {
 	Values []float32 `json:"values"`
 }
 
-// Embed генерирует вектор для одного текста.
-// Возвращает float32 вектор размерностью 768.
+// Embed generates a vector for a single text.
+// Returns a 768-dimensional float32 vector.
 func (e *EmbeddingClient) Embed(ctx context.Context, text string) ([]float32, error) {
 	if text == "" {
-		return nil, fmt.Errorf("пустой текст для эмбеддинга")
+		return nil, fmt.Errorf("empty text for embedding")
 	}
 
 	reqBody := embedRequest{
@@ -69,19 +69,19 @@ func (e *EmbeddingClient) Embed(ctx context.Context, text string) ([]float32, er
 
 	jsonData, err := json.Marshal(reqBody)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка сборки запроса embedding: %w", err)
+		return nil, fmt.Errorf("embedding request build error: %w", err)
 	}
 
 	url := fmt.Sprintf("%s?key=%s", embeddingURL, e.apiKey)
 
-	// Экспоненциальный backoff: до 3 повторов на 429 и 503
+	// Exponential backoff: up to 3 retries on 429 and 503
 	var body []byte
 	maxRetries := 3
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {
 		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
 		if err != nil {
-			return nil, fmt.Errorf("ошибка создания HTTP-запроса embedding: %w", err)
+			return nil, fmt.Errorf("embedding HTTP request creation error: %w", err)
 		}
 		req.Header.Set("Content-Type", "application/json")
 
@@ -91,7 +91,7 @@ func (e *EmbeddingClient) Embed(ctx context.Context, text string) ([]float32, er
 				time.Sleep(time.Duration(attempt*2) * time.Second)
 				continue
 			}
-			return nil, fmt.Errorf("ошибка сети embedding: %w", err)
+			return nil, fmt.Errorf("embedding network error: %w", err)
 		}
 
 		body, _ = io.ReadAll(resp.Body)
@@ -113,23 +113,23 @@ func (e *EmbeddingClient) Embed(ctx context.Context, text string) ([]float32, er
 			}
 		}
 
-		return nil, fmt.Errorf("ошибка Embedding API (статус %d): %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("Embedding API error (status %d): %s", resp.StatusCode, string(body))
 	}
 
 	var apiResp embedResponse
 	if err := json.Unmarshal(body, &apiResp); err != nil {
-		return nil, fmt.Errorf("ошибка разбора ответа embedding: %w", err)
+		return nil, fmt.Errorf("embedding response parse error: %w", err)
 	}
 
 	if apiResp.Embedding == nil || len(apiResp.Embedding.Values) == 0 {
-		return nil, fmt.Errorf("пустой ответ от Embedding API")
+		return nil, fmt.Errorf("empty response from Embedding API")
 	}
 
 	return apiResp.Embedding.Values, nil
 }
 
-// EmbedBatch генерирует эмбеддинги для пакета текстов.
-// Вызывает Embed для каждого текста последовательно (API не поддерживает batch в embedContent).
+// EmbedBatch generates embeddings for a batch of texts.
+// Calls Embed for each text sequentially (API does not support batch in embedContent).
 func (e *EmbeddingClient) EmbedBatch(ctx context.Context, texts []string) ([][]float32, error) {
 	results := make([][]float32, len(texts))
 	for i, text := range texts {
@@ -141,7 +141,7 @@ func (e *EmbeddingClient) EmbedBatch(ctx context.Context, texts []string) ([][]f
 
 		vec, err := e.Embed(ctx, text)
 		if err != nil {
-			return nil, fmt.Errorf("ошибка batch embedding [%d]: %w", i, err)
+			return nil, fmt.Errorf("batch embedding error [%d]: %w", i, err)
 		}
 		results[i] = vec
 	}

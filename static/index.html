@@ -1,139 +1,174 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#0a0a0b">
-  <title>Тёмный Монастырь — Dark Fantasy RPG</title>
-  <meta name="description" content="Тёмный Монастырь — текстовая Dark Fantasy RPG с ИИ-мастером. Исследуй мрачные подземелья, сражайся с тварями и раскрой тайны монастыря.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#000000">
+  <title>Dark Monastery — Dark Fantasy RPG</title>
+  <meta name="description" content="Dark Monastery — a text-based Dark Fantasy RPG with an AI game master.">
 
-  <!-- Fonts: Inter (интерфейс), Literata (повествование), JetBrains Mono (реплики и мета) -->
+  <!-- Press Start 2P — pixel font, UNDERTALE style -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;1,7..72,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
-  <!-- Пыль (canvas) -->
-  <canvas id="particleCanvas"></canvas>
-
-  <!-- Атмосфера: холодный свет, зерно плёнки, виньетка -->
-  <div class="atmosphere" aria-hidden="true">
-    <div class="gloom"></div>
-    <div class="vignette"></div>
-    <div class="grain"></div>
-  </div>
-
-  <!-- Main container -->
   <div class="game-container" id="gameContainer">
 
-    <!-- Header -->
-    <header class="header">
-      <h1 class="header__title" id="headerTitle">Тёмный монастырь</h1>
-      <p class="header__subtitle">хроника одной ночи</p>
-    </header>
+    <!-- HUD — top bar -->
+    <div class="hud-bar" id="hudBar">
+      <div class="hud-bar__row">
+        <span class="hud-lv">★ LV 1</span>
+        <span class="hud-hp" id="hudHp">
+          HP
+          <span class="hp-bar">
+            <span class="hp-bar__fill" id="hpBarFill" style="width:100%"></span>
+          </span>
+          <span class="hp-text" id="hpText">20/20</span>
+        </span>
+      </div>
+      <div class="hud-bar__row">
+        <span class="hud-location" id="hudLocation">Dark Monastery</span>
+        <span class="hud-gold" id="hudGold">☠ 0</span>
+      </div>
+    </div>
 
-    <!-- Main layout -->
-    <main class="main-layout">
-
-      <!-- Досье -->
-      <aside class="stat-panel" id="statPanel">
-        <div class="stat-panel__section">
-          <div class="stat-label">Локация</div>
-          <div class="stat-value stat-value--location" id="statLocation">—</div>
+    <!-- SIDEBAR STATS — persistent panel on large desktop -->
+    <aside class="sidebar-stats" id="sidebarStats">
+      <h2 class="sidebar-stats__title">Dossier</h2>
+      <div class="sidebar-stats__body">
+        <div class="stat-row">
+          <span class="stat-row__label">Location</span>
+          <span class="stat-row__value" id="sbLocation">—</span>
         </div>
-
-        <div class="stat-panel__section">
-          <div class="stat-label">Состояние</div>
-          <div class="stat-value" id="statCondition">—</div>
+        <div class="stat-row">
+          <span class="stat-row__label">Condition</span>
+          <span class="stat-row__value" id="sbCondition">—</span>
         </div>
+        <div class="stat-row">
+          <span class="stat-row__label">Sanity</span>
+          <span class="stat-row__value" id="sbSanity">—</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-row__label">Gold</span>
+          <span class="stat-row__value" id="sbGold">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-row__label">Equipped</span>
+          <span class="stat-row__value" id="sbEquipped">—</span>
+        </div>
+        <hr class="stats-separator">
+        <div class="stat-block">
+          <div class="stat-block__label">Inventory</div>
+          <ul class="stat-block__list" id="sbInventory"></ul>
+        </div>
+        <div class="stat-block">
+          <div class="stat-block__label">Skills</div>
+          <ul class="stat-block__list" id="sbSkills"></ul>
+        </div>
+        <div class="stat-block">
+          <div class="stat-block__label">Quests</div>
+          <ul class="stat-block__list" id="sbQuests"></ul>
+        </div>
+      </div>
+    </aside>
 
-        <div class="stat-panel__section">
-          <div class="stat-label">Рассудок</div>
-          <div class="sanity-indicator">
-            <span class="sanity-dot" id="sanityIcon"></span>
-            <div class="stat-value" id="statSanity">—</div>
+    <!-- DIALOG AREA — story narration -->
+    <div class="dialog-area" id="dialogArea">
+      <div class="dialog-log" id="storyLog">
+        <div class="dialog-log__inner" id="storyInner">
+          <p class="story-placeholder">darkness gathers...</p>
+        </div>
+      </div>
+
+      <div class="thinking-indicator" id="thinkingIndicator">
+        <span class="thinking-text">...</span>
+      </div>
+    </div>
+
+    <!-- INPUT PANEL — bottom bar -->
+    <div class="input-panel">
+      <form class="action-form" id="actionForm" autocomplete="off">
+        <span class="input-prompt">></span>
+        <input
+          type="text"
+          class="input-field"
+          id="actionInput"
+          placeholder="your action"
+          autofocus
+        >
+        <button type="submit" class="input-submit" id="btnSubmit">↵</button>
+      </form>
+
+      <div class="command-buttons">
+        <button class="cmd-btn" id="btnMenu">Dossier</button>
+        <button class="cmd-btn cmd-btn--danger" id="btnNewGame">New</button>
+        <button class="cmd-btn" id="btnSave">Save</button>
+        <button class="cmd-btn" id="btnLoad">Load</button>
+      </div>
+    </div>
+
+    <!-- STATS MENU — dossier (modal) -->
+    <div class="stats-overlay" id="statsOverlay" hidden>
+      <div class="stats-menu">
+        <h2 class="stats-menu__title">Dossier</h2>
+
+        <div class="stats-menu__body">
+          <div class="stat-row">
+            <span class="stat-row__label">Location</span>
+            <span class="stat-row__value" id="statLocation">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-row__label">Condition</span>
+            <span class="stat-row__value" id="statCondition">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-row__label">Sanity</span>
+            <span class="stat-row__value" id="statSanity">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-row__label">Gold</span>
+            <span class="stat-row__value" id="statGold">0</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-row__label">Equipped</span>
+            <span class="stat-row__value" id="statEquipped">—</span>
+          </div>
+
+          <hr class="stats-separator">
+
+          <div class="stat-block">
+            <div class="stat-block__label">Inventory</div>
+            <ul class="stat-block__list" id="statInventory"></ul>
+          </div>
+          <div class="stat-block">
+            <div class="stat-block__label">Skills</div>
+            <ul class="stat-block__list" id="statSkills"></ul>
+          </div>
+          <div class="stat-block">
+            <div class="stat-block__label">Quests</div>
+            <ul class="stat-block__list" id="statQuests"></ul>
           </div>
         </div>
 
-        <div class="stat-panel__divider" aria-hidden="true"></div>
-
-        <div class="stat-panel__section">
-          <div class="stat-label">Золото</div>
-          <div class="stat-value stat-value--gold" id="statGold">0</div>
+        <div class="stats-menu__footer">
+          <button class="cmd-btn" id="btnCloseStats">Close</button>
         </div>
+      </div>
+    </div>
 
-        <div class="stat-panel__section">
-          <div class="stat-label">Экипировано</div>
-          <div class="stat-value" id="statEquipped">—</div>
-        </div>
+    <!-- SAVES MODAL -->
+    <div class="modal-overlay" id="savesModal" hidden>
+      <div class="modal">
+        <h2 class="modal__title">Saves</h2>
+        <div class="modal__body" id="savesList"></div>
+        <button class="cmd-btn modal__close" id="btnCloseModal">Close</button>
+      </div>
+    </div>
 
-        <div class="stat-panel__divider" aria-hidden="true"></div>
-
-        <div class="stat-panel__section">
-          <div class="stat-label">Инвентарь</div>
-          <ul class="stat-list" id="statInventory"></ul>
-        </div>
-
-        <div class="stat-panel__section">
-          <div class="stat-label">Навыки</div>
-          <ul class="stat-list" id="statSkills"></ul>
-        </div>
-
-        <div class="stat-panel__divider" aria-hidden="true"></div>
-
-        <div class="stat-panel__section">
-          <div class="stat-label">Квесты</div>
-          <ul class="stat-list" id="statQuests"></ul>
-        </div>
-      </aside>
-
-      <!-- Летопись -->
-      <section class="story-area">
-        <div class="story-log" id="storyLog">
-          <div class="story-log__inner" id="storyInner">
-            <p class="story-placeholder">тьма собирается…</p>
-          </div>
-        </div>
-
-        <div class="thinking-indicator" id="thinkingIndicator">
-          <span class="thinking-dot"></span>
-          <span class="thinking-dot"></span>
-          <span class="thinking-dot"></span>
-          <span class="thinking-text">мастер пишет</span>
-        </div>
-
-        <form class="input-area" id="actionForm" autocomplete="off">
-          <span class="input-prompt" aria-hidden="true">&gt;</span>
-          <input
-            type="text"
-            class="input-field"
-            id="actionInput"
-            placeholder="твоё действие"
-            autofocus
-          >
-          <button type="submit" class="input-submit" id="btnSubmit" title="Отправить">↵</button>
-        </form>
-
-        <div class="command-buttons">
-          <button class="cmd-btn cmd-btn--danger" id="btnNewGame">Новая игра</button>
-          <button class="cmd-btn" id="btnSave">Сохранить</button>
-          <button class="cmd-btn" id="btnLoad">Загрузить</button>
-        </div>
-
-        <!-- Saves modal -->
-        <div class="modal-overlay" id="savesModal" hidden>
-          <div class="modal">
-            <h2 class="modal__title">Сохранения</h2>
-            <div class="modal__body" id="savesList"></div>
-            <button class="cmd-btn modal__close" id="btnCloseModal">Закрыть</button>
-          </div>
-        </div>
-      </section>
-
-    </main>
   </div>
 
   <script src="/static/js/effects.js"></script>

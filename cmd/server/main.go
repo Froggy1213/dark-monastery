@@ -17,38 +17,38 @@ import (
 )
 
 func main() {
-	mode := flag.String("mode", "terminal", "Режим запуска: terminal или web")
-	port := flag.String("port", "8080", "Порт для веб-сервера")
+	mode := flag.String("mode", "terminal", "Run mode: terminal or web")
+	port := flag.String("port", "8080", "Web server port")
 	flag.Parse()
 
 	if err := godotenv.Load(); err != nil {
-		log.Println("Предупреждение: файл .env не найден, попытаемся взять ключ из системы")
+		log.Println("Warning: .env file not found, will try to get key from environment")
 	}
 
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
-		log.Fatal("КРИТИЧЕСКАЯ ОШИБКА: Переменная GEMINI_API_KEY не найдена!")
+		log.Fatal("CRITICAL ERROR: GEMINI_API_KEY environment variable not found!")
 	}
 
-	// Инициализация AI компонентов
+	// Initialize AI components
 	geminiClient := ai.NewGeminiClient(apiKey)
 	embedClient := ai.NewEmbeddingClient(apiKey)
 	lore := game.DefaultLore()
 	geminiClient.SetLore(lore)
 	engine := game.NewEngine(geminiClient)
 
-	// Файловое хранилище (для состояний и метаданных)
+	// File storage (for states and metadata)
 	homeDir, _ := os.UserHomeDir()
 	saveDir := filepath.Join(homeDir, ".dark-monastery", "saves")
 	fileStore, err := storage.NewFileStore(saveDir)
 	if err != nil {
-		log.Fatalf("Ошибка инициализации файлового хранилища: %v", err)
+		log.Fatalf("File storage initialization error: %v", err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Инициализация RAG (PostgreSQL + Async Extractor)
+	// Initialize RAG (PostgreSQL + Async Extractor)
 	var pgStore *storage.PgStore
 	var extractor *memory.Extractor
 
@@ -56,10 +56,10 @@ func main() {
 	if dbURL != "" {
 		pgStore, err = storage.NewPgStore(ctx, dbURL)
 		if err != nil {
-			log.Printf("ПРЕДУПРЕЖДЕНИЕ: Ошибка подключения к PostgreSQL, игра запустится в fallback-режиме (без RAG): %v", err)
+			log.Printf("WARNING: PostgreSQL connection error, running in fallback mode (no RAG): %v", err)
 		} else {
 			if err := pgStore.Migrate(ctx); err != nil {
-				log.Fatalf("Ошибка миграции БД: %v", err)
+				log.Fatalf("DB migration error: %v", err)
 			}
 			defer pgStore.Close()
 
@@ -68,7 +68,7 @@ func main() {
 			defer extractor.Stop()
 		}
 	} else {
-		log.Println("ПРЕДУПРЕЖДЕНИЕ: DATABASE_URL не задан, игра запустится в fallback-режиме (без долгосрочной памяти)")
+		log.Println("WARNING: DATABASE_URL not set, running in fallback mode (no long-term memory)")
 	}
 
 	switch *mode {
@@ -78,5 +78,5 @@ func main() {
 		runTerminal(ctx, engine, fileStore, pgStore, embedClient, extractor)
 	}
 
-	fmt.Println("Покидаем монастырь...")
+	fmt.Println("Leaving the monastery...")
 }

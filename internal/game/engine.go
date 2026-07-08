@@ -1,30 +1,30 @@
 package game
 
-// AIClient — интерфейс для AI-движка игры.
-// Позволяет подменять реализацию (Gemini, мок для тестов, будущие провайдеры).
+// AIClient is an interface for the AI game engine.
+// Allows swapping implementations (Gemini, mock for tests, future providers).
 type AIClient interface {
 	GenerateNextTurn(state *GameState, action string) (*GameState, error)
 }
 
-// Engine управляет игровым циклом: принимает состояние и действие игрока,
-// делегирует AI-клиенту генерацию следующего хода.
+// Engine manages the game loop: receives state and player action,
+// delegates to the AI client for generating the next turn.
 type Engine struct {
 	aiClient AIClient
 }
 
-// NewEngine создаёт новый экземпляр игрового движка.
+// NewEngine creates a new game engine instance.
 func NewEngine(aiClient AIClient) *Engine {
 	return &Engine{aiClient: aiClient}
 }
 
-// ProcessTurn обрабатывает один ход: отправляет состояние и действие в AI,
-// возвращает обновлённое состояние.
+// ProcessTurn processes one turn: sends the state and action to the AI,
+// returns the updated state.
 func (e *Engine) ProcessTurn(state *GameState, action string) (*GameState, error) {
 	return e.aiClient.GenerateNextTurn(state, action)
 }
 
-// AIClient возвращает текущий AI-клиент.
-// Используется для настройки контекста памяти перед вызовом ProcessTurn.
+// AIClient returns the current AI client.
+// Used to configure memory context before calling ProcessTurn.
 func (e *Engine) AIClient() AIClient {
 	return e.aiClient
 }

@@ -5,8 +5,8 @@ import (
 	"strings"
 )
 
-// LoreBook содержит статический лор игрового мира — фракции, локации, NPC, легенды.
-// Эти данные вшиваются в системный промпт, чтобы Gemini знал мир игры.
+// LoreBook contains the static lore of the game world — factions, locations, NPCs, legends.
+// This data is injected into the system prompt so Gemini knows the game world.
 type LoreBook struct {
 	WorldName        string
 	WorldDescription string
@@ -17,7 +17,7 @@ type LoreBook struct {
 	RandomEvents     []string
 }
 
-// Faction — фракция/организация в мире игры.
+// Faction — a faction/organization in the game world.
 type Faction struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
@@ -25,16 +25,16 @@ type Faction struct {
 	Symbol      string `json:"symbol"`
 }
 
-// Location — ключевая локация мира.
+// Location — a key location in the world.
 type Location struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description"`
 	Connections []string `json:"connections"`
-	DangerLevel string   `json:"danger_level"` // "Низкий", "Средний", "Высокий", "Смертельный"
+	DangerLevel string   `json:"danger_level"` // "Low", "Medium", "High", "Deadly"
 	Secrets     []string `json:"secrets"`
 }
 
-// NPC — ключевой персонаж мира.
+// NPC — a key character in the world.
 type NPC struct {
 	Name        string `json:"name"`
 	Role        string `json:"role"`
@@ -44,154 +44,154 @@ type NPC struct {
 	Secret      string `json:"secret"`
 }
 
-// DefaultLore возвращает предзаполненный лор Тёмного Монастыря.
+// DefaultLore returns a pre-populated lore for the Dark Monastery.
 func DefaultLore() *LoreBook {
 	return &LoreBook{
-		WorldName:        "Тёмный Монастырь",
-		WorldDescription: "Древний монастырь, затерянный в проклятых горах. Когда-то здесь молились монахи Ордена Света, но теперь это пристанище тьмы, безумных культистов и существ из иных миров. Подземелья монастыря уходят глубоко в землю, скрывая древние тайны и невообразимые ужасы.",
+		WorldName:        "Dark Monastery",
+		WorldDescription: "An ancient monastery lost in the cursed mountains. Once, monks of the Order of the Fading Light prayed here, but now it is a haven of darkness, mad cultists, and beings from other worlds. The monastery dungeons descend deep into the earth, hiding ancient secrets and unimaginable horrors.",
 		Factions: []Faction{
 			{
-				Name:        "Орден Угасающего Света",
-				Description: "Остатки монахов, пытающихся сдержать тьму монастыря. Немногочисленны, но владеют древними ритуалами очищения.",
-				Goal:        "Запечатать врата Бездны под монастырём.",
-				Symbol:      "Тусклая свеча в круге",
+				Name:        "Order of the Fading Light",
+				Description: "The remnants of monks trying to contain the darkness of the monastery. Few in number, but they know ancient purification rituals.",
+				Goal:        "Seal the Gates of the Abyss beneath the monastery.",
+				Symbol:      "A dim candle in a circle",
 			},
 			{
-				Name:        "Культ Кровавой Зари",
-				Description: "Безумные сектанты, поклоняющиеся древнему злу, спящему под монастырём. Приносят кровавые жертвы и охотятся на заблудших путников.",
-				Goal:        "Пробудить Спящего в Бездне и обрести вечную жизнь.",
-				Symbol:      "Красное солнце с чёрными лучами",
+				Name:        "Cult of the Crimson Dawn",
+				Description: "Mad sectarians worshipping the ancient evil sleeping beneath the monastery. They make blood sacrifices and hunt lost travelers.",
+				Goal:        "Awaken the Sleeper in the Abyss and gain eternal life.",
+				Symbol:      "A red sun with black rays",
 			},
 			{
-				Name:        "Скитальцы Тумана",
-				Description: "Нейтральная фракция исследователей и охотников за реликвиями. Знают тайные проходы монастыря и торгуют редкими артефактами.",
-				Goal:        "Найти легендарный артефакт «Сердце Монастыря».",
-				Symbol:      "Серая маска с пустыми глазницами",
+				Name:        "Mist Wanderers",
+				Description: "A neutral faction of explorers and relic hunters. They know the monastery's secret passages and trade in rare artifacts.",
+				Goal:        "Find the legendary artifact 'Heart of the Monastery'.",
+				Symbol:      "A gray mask with empty eye sockets",
 			},
 			{
-				Name:        "Стражи Порога",
-				Description: "Призрачные рыцари, связанные клятвой охранять вход в подземелья даже после смерти. Не нападают первыми, но безжалостны к нарушителям их запретов.",
-				Goal:        "Не допустить никого к Глубинным Вратам.",
-				Symbol:      "Чёрный щит с серебряным черепом",
+				Name:        "Guardians of the Threshold",
+				Description: "Ghostly knights bound by an oath to guard the entrance to the dungeons even after death. They do not attack first, but are merciless to those who break their prohibitions.",
+				Goal:        "Prevent anyone from reaching the Deep Gates.",
+				Symbol:      "A black shield with a silver skull",
 			},
 		},
 		Locations: map[string]Location{
-			"Разрушенные ворота монастыря": {
-				Name:        "Разрушенные ворота монастыря",
-				Description: "Массивные каменные ворота, покрытые мхом и трещинами. Над ними — полустёртая фреска: святой, поражающий змея. Воздух тяжёлый и холодный.",
-				Connections: []string{"Двор Покаяния", "Сторожевая башня"},
-				DangerLevel: "Низкий",
-				Secrets:     []string{"В нише над воротами спрятан старинный амулет Ордена Света."},
+			"Ruined Monastery Gates": {
+				Name:        "Ruined Monastery Gates",
+				Description: "Massive stone gates covered in moss and cracks. Above them is a half-erased fresco: a saint slaying a serpent. The air is heavy and cold.",
+				Connections: []string{"Courtyard of Penance", "Watchtower"},
+				DangerLevel: "Low",
+				Secrets:     []string{"An ancient amulet of the Order of Light is hidden in a niche above the gates."},
 			},
-			"Двор Покаяния": {
-				Name:        "Двор Покаяния",
-				Description: "Просторный внутренний двор, вымощенный потрескавшимися плитами. В центре — высохший фонтан в форме плачущего ангела. Следы костров — здесь часто останавливаются Скитальцы Тумана.",
-				Connections: []string{"Разрушенные ворота монастыря", "Главный зал", "Кельи послушников"},
-				DangerLevel: "Средний",
-				Secrets:     []string{"В фонтане спрятан тайник Скитальцев.", "Одна из плит ведёт в подземный ход."},
+			"Courtyard of Penance": {
+				Name:        "Courtyard of Penance",
+				Description: "A spacious inner courtyard paved with cracked slabs. In the center is a dried-up fountain shaped like a weeping angel. Traces of bonfires — the Mist Wanderers often stop here.",
+				Connections: []string{"Ruined Monastery Gates", "Main Hall", "Novice Cells"},
+				DangerLevel: "Medium",
+				Secrets:     []string{"A hidden cache of the Wanderers is concealed in the fountain.", "One of the slabs leads to an underground passage."},
 			},
-			"Главный зал": {
-				Name:        "Главный зал",
-				Description: "Огромный зал с обрушившимся сводом. Видны остатки алтаря, запятнанного чем-то тёмным. На стенах — фрески, изображающие историю монастыря, но многие лица стёрты или заменены жуткими символами.",
-				Connections: []string{"Двор Покаяния", "Библиотека", "Склеп"},
-				DangerLevel: "Высокий",
-				Secrets:     []string{"Алтарь скрывает механизм, открывающий проход в Склеп.", "Фрески меняются ночью, указывая путь к тайной комнате."},
+			"Main Hall": {
+				Name:        "Main Hall",
+				Description: "A huge hall with a collapsed vault. The remnants of an altar are visible, stained with something dark. On the walls are frescoes depicting the monastery's history, but many faces are erased or replaced with eerie symbols.",
+				Connections: []string{"Courtyard of Penance", "Library", "Crypt"},
+				DangerLevel: "High",
+				Secrets:     []string{"The altar conceals a mechanism that opens a passage to the Crypt.", "The frescoes change at night, pointing the way to a secret room."},
 			},
-			"Библиотека": {
-				Name:        "Библиотека",
-				Description: "Бесконечные ряды полок с древними фолиантами. Многие книги рассыпаются в пыль при прикосновении. В воздухе пахнет старой бумагой и серой.",
-				Connections: []string{"Главный зал", "Башня Астронома"},
-				DangerLevel: "Высокий",
-				Secrets:     []string{"Запретная секция скрыта за иллюзорной стеной.", "Дневник последнего аббата описывает ритуал запечатывания Врат."},
+			"Library": {
+				Name:        "Library",
+				Description: "Endless rows of shelves with ancient tomes. Many books crumble to dust at the touch. The air smells of old paper and sulfur.",
+				Connections: []string{"Main Hall", "Astronomer's Tower"},
+				DangerLevel: "High",
+				Secrets:     []string{"The forbidden section is hidden behind an illusory wall.", "The last abbot's diary describes the ritual for sealing the Gates."},
 			},
-			"Склеп": {
-				Name:        "Склеп",
-				Description: "Сырое подземелье с рядами каменных саркофагов. Некоторые крышки сдвинуты. Из глубины доносится едва слышный шёпот.",
-				Connections: []string{"Главный зал", "Глубинные Врата"},
-				DangerLevel: "Смертельный",
-				Secrets:     []string{"В одном из саркофагов покоится тело Святого — оно не тронуто тлением.", "Шёпот — это голоса заточённых демонов."},
+			"Crypt": {
+				Name:        "Crypt",
+				Description: "A damp dungeon with rows of stone sarcophagi. Some lids are shifted. A barely audible whisper comes from the depths.",
+				Connections: []string{"Main Hall", "Deep Gates"},
+				DangerLevel: "Deadly",
+				Secrets:     []string{"The body of a Saint rests in one of the sarcophagi — untouched by decay.", "The whisper is the voices of imprisoned demons."},
 			},
-			"Глубинные Врата": {
-				Name:        "Глубинные Врата",
-				Description: "Огромная каменная дверь, покрытая светящимися рунами. За ней — Бездна, источник всей тьмы монастыря. Воздух вибрирует от напряжения.",
-				Connections: []string{"Склеп"},
-				DangerLevel: "Смертельный",
-				Secrets:     []string{"Врата можно открыть только Ключом-Сердцем.", "За Вратами спит древнее существо — Спящий в Бездне."},
+			"Deep Gates": {
+				Name:        "Deep Gates",
+				Description: "A huge stone door covered in glowing runes. Beyond it lies the Abyss, the source of all the monastery's darkness. The air vibrates with tension.",
+				Connections: []string{"Crypt"},
+				DangerLevel: "Deadly",
+				Secrets:     []string{"The Gates can only be opened with the Heart-Key.", "Beyond the Gates sleeps an ancient being — the Sleeper in the Abyss."},
 			},
 		},
 		MajorNPCs: []NPC{
 			{
-				Name:        "Аббат Морган",
-				Role:        "Последний настоятель монастыря (призрак)",
-				Description: "Высокая полупрозрачная фигура в рваной рясе. Говорит медленно, с болью. Проклят вечно бродить по руинам.",
-				Location:    "Главный зал",
-				Faction:     "Орден Угасающего Света",
-				Secret:      "Знает, где спрятан Ключ-Сердце, но отдаст его только достойному.",
+				Name:        "Abbot Morgan",
+				Role:        "Last prior of the monastery (ghost)",
+				Description: "A tall, translucent figure in a tattered robe. Speaks slowly, with pain. Cursed to wander the ruins forever.",
+				Location:    "Main Hall",
+				Faction:     "Order of the Fading Light",
+				Secret:      "Knows where the Heart-Key is hidden, but will only give it to a worthy person.",
 			},
 			{
-				Name:        "Жрица Морриган",
-				Role:        "Лидер Культа Кровавой Зари",
-				Description: "Молодая женщина с безумными глазами в багровом одеянии. Говорит напевно, часто смеётся без причины.",
-				Location:    "Склеп",
-				Faction:     "Культ Кровавой Зари",
-				Secret:      "Когда-то была послушницей Ордена Света. Её падение — результат воздействия Бездны.",
+				Name:        "Priestess Morrigan",
+				Role:        "Leader of the Cult of the Crimson Dawn",
+				Description: "A young woman with mad eyes in a crimson robe. Speaks in a sing-song voice, often laughs without reason.",
+				Location:    "Crypt",
+				Faction:     "Cult of the Crimson Dawn",
+				Secret:      "Was once a novice of the Order of Light. Her fall is the result of the Abyss's influence.",
 			},
 			{
-				Name:        "Гарет-Скиталец",
-				Role:        "Торговец и информатор",
-				Description: "Худой мужчина в сером плаще с капюшоном. Всегда появляется неожиданно. Знает все слухи и тайны монастыря.",
-				Location:    "Двор Покаяния",
-				Faction:     "Скитальцы Тумана",
-				Secret:      "На самом деле — бывший инквизитор, бежавший от церкви.",
+				Name:        "Gareth the Wanderer",
+				Role:        "Merchant and informant",
+				Description: "A thin man in a gray hooded cloak. Always appears unexpectedly. Knows all the rumors and secrets of the monastery.",
+				Location:    "Courtyard of Penance",
+				Faction:     "Mist Wanderers",
+				Secret:      "In truth, a former inquisitor who fled the church.",
 			},
 		},
 		Legends: []string{
-			"Говорят, что в полнолуние в Главном зале можно услышать хор призрачных монахов.",
-			"Спящий в Бездне видит сны — и эти сны становятся реальностью в стенах монастыря.",
-			"Тот, кто зажжёт три Ритуальные Свечи в Склепе, сможет говорить с мёртвыми.",
-			"Ключ-Сердце — это не предмет, а живое существо, принявшее форму камня.",
-			"Каждый, кто пытался покинуть монастырь после заката, возвращался к воротам через час, не помня дороги.",
+			"They say that during the full moon in the Main Hall you can hear the choir of ghostly monks.",
+			"The Sleeper in the Abyss dreams — and these dreams become reality within the monastery walls.",
+			"Whoever lights the three Ritual Candles in the Crypt can speak with the dead.",
+			"The Heart-Key is not an object, but a living creature that has taken the form of a stone.",
+			"Everyone who tried to leave the monastery after sunset returned to the gates an hour later, not remembering the way.",
 		},
 		RandomEvents: []string{
-			"Внезапный порыв ледяного ветра гасит все огни.",
-			"Из темноты доносится детский плач, который резко обрывается.",
-			"На стене проступает кровавая надпись, которой не было мгновение назад.",
-			"Вы слышите шаги за спиной, но обернувшись, видите лишь пустоту.",
-			"Фреска на стене на мгновение оживает — изображённый святой поворачивает голову в вашу сторону.",
-			"Пол под ногами дрожит, и из глубин доносится низкий гул.",
+			"A sudden gust of icy wind extinguishes all lights.",
+			"A child's crying comes from the darkness, abruptly cut off.",
+			"A bloody inscription appears on the wall that wasn't there a moment ago.",
+			"You hear footsteps behind you, but turning around, you see only emptiness.",
+			"A fresco on the wall briefly comes to life — the depicted saint turns his head toward you.",
+			"The floor trembles beneath your feet, and a low rumble emanates from the depths.",
 		},
 	}
 }
 
-// LorePrompt создаёт текстовое описание лора для вставки в системный промпт.
+// LorePrompt creates a text description of the lore for insertion into the system prompt.
 func (l *LoreBook) LorePrompt() string {
 	var sb strings.Builder
 
-	sb.WriteString("МИР ИГРЫ:\n")
+	sb.WriteString("WORLD:\n")
 	sb.WriteString(l.WorldDescription)
 	sb.WriteString("\n\n")
 
-	sb.WriteString("ФРАКЦИИ:\n")
+	sb.WriteString("FACTIONS:\n")
 	for _, f := range l.Factions {
-		fmt.Fprintf(&sb, "- %s: %s Цель: %s\n", f.Name, f.Description, f.Goal)
+		fmt.Fprintf(&sb, "- %s: %s Goal: %s\n", f.Name, f.Description, f.Goal)
 	}
 
-	sb.WriteString("\nКЛЮЧЕВЫЕ ЛОКАЦИИ:\n")
+	sb.WriteString("\nKEY LOCATIONS:\n")
 	for _, loc := range l.Locations {
-		fmt.Fprintf(&sb, "- %s (опасность: %s): %s\n", loc.Name, loc.DangerLevel, loc.Description)
+		fmt.Fprintf(&sb, "- %s (danger: %s): %s\n", loc.Name, loc.DangerLevel, loc.Description)
 		if len(loc.Connections) > 0 {
-			sb.WriteString("  Связана с: ")
+			sb.WriteString("  Connected to: ")
 			sb.WriteString(strings.Join(loc.Connections, ", "))
 			sb.WriteString("\n")
 		}
 	}
 
-	sb.WriteString("\nКЛЮЧЕВЫЕ ПЕРСОНАЖИ (NPC):\n")
+	sb.WriteString("\nKEY CHARACTERS (NPCs):\n")
 	for _, npc := range l.MajorNPCs {
 		fmt.Fprintf(&sb, "- %s (%s): %s\n", npc.Name, npc.Role, npc.Description)
 	}
 
-	sb.WriteString("\nЛЕГЕНДЫ И СЛУХИ:\n")
+	sb.WriteString("\nLEGENDS AND RUMORS:\n")
 	for _, legend := range l.Legends {
 		fmt.Fprintf(&sb, "- %s\n", legend)
 	}

@@ -2,7 +2,7 @@ package storage
 
 import "time"
 
-// SaveMeta содержит метаданные сохранения.
+// SaveMeta contains save metadata.
 type SaveMeta struct {
 	SessionID  string    `json:"session_id"`
 	PlayerName string    `json:"player_name"`

@@ -13,16 +13,16 @@ import (
 
 const apiURL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent"
 
-// GeminiClient реализует game.AIClient через Google Gemini API.
+// GeminiClient implements game.AIClient via the Google Gemini API.
 type GeminiClient struct {
 	apiKey        string
 	httpClient    *http.Client
 	lore          *game.LoreBook
 	history       game.HistoryProvider // legacy
-	memoryContext string               // RAG: контекст от MemoryManager
+	memoryContext string               // RAG: context from MemoryManager
 }
 
-// NewGeminiClient создаёт новый экземпляр GeminiClient.
+// NewGeminiClient creates a new GeminiClient instance.
 func NewGeminiClient(apiKey string) *GeminiClient {
 	return &GeminiClient{
 		apiKey:     apiKey,
@@ -30,17 +30,17 @@ func NewGeminiClient(apiKey string) *GeminiClient {
 	}
 }
 
-// SetLore задаёт лор мира для инжекции в промпт.
+// SetLore sets the world lore for injection into the prompt.
 func (g *GeminiClient) SetLore(lore *game.LoreBook) { g.lore = lore }
 
-// SetHistory задаёт провайдер истории диалога для инжекции в промпт (legacy).
+// SetHistory sets the dialogue history provider for injection into the prompt (legacy).
 func (g *GeminiClient) SetHistory(h game.HistoryProvider) { g.history = h }
 
-// SetMemoryContext задаёт контекст памяти от RAG-системы.
-// Вызывается перед каждым GenerateNextTurn.
+// SetMemoryContext sets the memory context from the RAG system.
+// Called before each GenerateNextTurn.
 func (g *GeminiClient) SetMemoryContext(ctx string) { g.memoryContext = ctx }
 
-// --- Внутренние типы для работы с Gemini API ---
+// --- Internal types for working with the Gemini API ---
 
 type geminiRequest struct {
 	SystemInstruction *instruction `json:"systemInstruction,omitempty"`
@@ -70,10 +70,10 @@ type geminiResponse struct {
 	} `json:"candidates"`
 }
 
-// GenerateNextTurn отправляет состояние и действие игрока в Gemini,
-// возвращает обновлённое состояние.
+// GenerateNextTurn sends the state and player action to Gemini,
+// returns the updated state.
 func (g *GeminiClient) GenerateNextTurn(currentState *game.GameState, playerAction string) (*game.GameState, error) {
-	// Собираем системный промпт с лором, памятью и историей
+	// Assemble the system prompt with lore, memory, and history
 	promptCtx := &game.PromptContext{
 		Lore:          g.lore,
 		History:       g.history,
@@ -81,7 +81,7 @@ func (g *GeminiClient) GenerateNextTurn(currentState *game.GameState, playerActi
 	}
 	systemPrompt := game.BuildSystemPrompt(promptCtx)
 
-	// Сбрасываем memoryContext после использования
+	// Reset memoryContext after use
 	g.memoryContext = ""
 
 	userPrompt := game.BuildUserPrompt(currentState, playerAction)
@@ -94,25 +94,25 @@ func (g *GeminiClient) GenerateNextTurn(currentState *game.GameState, playerActi
 
 	jsonData, err := json.Marshal(reqBody)
 	if err != nil {
-		return nil, fmt.Errorf("Ошибка сборки запроса: %w", err)
+		return nil, fmt.Errorf("request build error: %w", err)
 	}
 
 	url := fmt.Sprintf("%s?key=%s", apiURL, g.apiKey)
 
-	// Экспоненциальный backoff: до 3 повторов на 429 и 503
+	// Exponential backoff: up to 3 retries on 429 and 503
 	var body []byte
 	maxRetries := 3
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {
 		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 		if err != nil {
-			return nil, fmt.Errorf("Ошибка создания HTTP-запроса: %w", err)
+			return nil, fmt.Errorf("HTTP request creation error: %w", err)
 		}
 		req.Header.Set("Content-Type", "application/json")
 
 		resp, err := g.httpClient.Do(req)
 		if err != nil {
-			return nil, fmt.Errorf("Ошибка сети: %w", err)
+			return nil, fmt.Errorf("network error: %w", err)
 		}
 
 		body, _ = io.ReadAll(resp.Body)
@@ -125,27 +125,27 @@ func (g *GeminiClient) GenerateNextTurn(currentState *game.GameState, playerActi
 		if resp.StatusCode == http.StatusServiceUnavailable || resp.StatusCode == http.StatusTooManyRequests {
 			if attempt < maxRetries {
 				sleepTime := time.Duration(attempt*2) * time.Second
-				fmt.Printf("\n[Сервера Google перегружены. Авто-повтор %d/%d через %v...]\n", attempt, maxRetries, sleepTime)
+				fmt.Printf("\n[Google servers overloaded. Auto-retry %d/%d in %v...]\n", attempt, maxRetries, sleepTime)
 				time.Sleep(sleepTime)
 				continue
 			}
 		}
 
-		return nil, fmt.Errorf("Ошибка API (статус %d): %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(body))
 	}
 
 	var apiResp geminiResponse
 	if err := json.Unmarshal(body, &apiResp); err != nil {
-		return nil, fmt.Errorf("Ошибка разбора ответа от API: %w", err)
+		return nil, fmt.Errorf("API response parse error: %w", err)
 	}
 
 	if len(apiResp.Candidates) == 0 || len(apiResp.Candidates[0].Content.Parts) == 0 {
-		return nil, fmt.Errorf("Пустой ответ от API")
+		return nil, fmt.Errorf("Empty API response")
 	}
 
 	var newState game.GameState
 	if err := json.Unmarshal([]byte(apiResp.Candidates[0].Content.Parts[0].Text), &newState); err != nil {
-		return nil, fmt.Errorf("Ошибка разбора JSON от ИИ: %w", err)
+		return nil, fmt.Errorf("AI JSON parse error: %w", err)
 	}
 
 	return &newState, nil

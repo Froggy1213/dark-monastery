@@ -7,14 +7,14 @@ import (
 	"dark-monastery/internal/memory"
 )
 
-// writeJSON сериализует data в JSON и отправляет клиенту.
+// writeJSON serializes data as JSON and sends it to the client.
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(data)
 }
 
-// memoryToStorageRecords конвертирует краткосрочную память в слайс записей.
+// memoryToStorageRecords converts short-term memory into a slice of records.
 func memoryToStorageRecords(mem *memory.MemoryManager) []memory.TurnRecord {
 	if mem == nil {
 		return nil

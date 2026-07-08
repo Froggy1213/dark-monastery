@@ -4,23 +4,23 @@ import (
 	"sync"
 )
 
-// TurnRecord хранит один ход диалога: действие игрока и ответ AI.
+// TurnRecord stores one turn of dialogue: the player's action and the AI's response.
 type TurnRecord struct {
 	PlayerAction string `json:"player_action"`
 	AIResponse   string `json:"ai_response"`
 }
 
-// History — кольцевой буфер для хранения последних N ходов.
-// Позволяет Gemini помнить недавние события.
+// History is a ring buffer for storing the last N turns.
+// Allows Gemini to remember recent events.
 type History struct {
 	mu       sync.RWMutex
 	buffer   []TurnRecord
 	capacity int
-	head     int // позиция для следующей записи
-	size     int // текущее количество записей
+	head     int // position for the next write
+	size     int // current number of entries
 }
 
-// NewHistory создаёт новый кольцевой буфер заданной ёмкости.
+// NewHistory creates a new ring buffer with the given capacity.
 func NewHistory(capacity int) *History {
 	return &History{
 		buffer:   make([]TurnRecord, capacity),
@@ -28,7 +28,7 @@ func NewHistory(capacity int) *History {
 	}
 }
 
-// Add добавляет запись о ходе в историю.
+// Add adds a turn record to the history.
 func (h *History) Add(action, response string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -43,8 +43,8 @@ func (h *History) Add(action, response string) {
 	}
 }
 
-// Recent возвращает последние N записей в хронологическом порядке.
-// Если записей меньше N, возвращает все имеющиеся.
+// Recent returns the last N records in chronological order.
+// If there are fewer than N records, returns all available.
 func (h *History) Recent(n int) []TurnRecord {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -54,10 +54,10 @@ func (h *History) Recent(n int) []TurnRecord {
 	}
 
 	result := make([]TurnRecord, n)
-	// Самая старая запись находится в позиции (head - size + capacity) % capacity
+	// The oldest record is at position (head - size + capacity) % capacity
 	start := (h.head - h.size + h.capacity) % h.capacity
 
-	// Если n < size, берём только последние n
+	// If n < size, take only the last n
 	if n < h.size {
 		start = (h.head - n + h.capacity) % h.capacity
 	}
@@ -69,30 +69,30 @@ func (h *History) Recent(n int) []TurnRecord {
 	return result
 }
 
-// RecentContext возвращает последние N ходов в виде текста для промпта.
+// RecentContext returns the last N turns as text for the prompt.
 func (h *History) RecentContext(n int) string {
 	records := h.Recent(n)
 	if len(records) == 0 {
 		return ""
 	}
 
-	ctx := "НЕДАВНИЕ СОБЫТИЯ:\n"
+	ctx := "RECENT EVENTS:\n"
 	for i, r := range records {
-		ctx += "Ход " + string(rune('1'+i)) + ":\n"
-		ctx += "  Действие игрока: " + r.PlayerAction + "\n"
-		ctx += "  Ответ мастера: " + r.AIResponse + "\n"
+		ctx += "Turn " + string(rune('1'+i)) + ":\n"
+		ctx += "  Player action: " + r.PlayerAction + "\n"
+		ctx += "  Master response: " + r.AIResponse + "\n"
 	}
 	return ctx
 }
 
-// Len возвращает количество записей в буфере.
+// Len returns the number of records in the buffer.
 func (h *History) Len() int {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return h.size
 }
 
-// Clear очищает историю.
+// Clear clears the history.
 func (h *History) Clear() {
 	h.mu.Lock()
 	defer h.mu.Unlock()

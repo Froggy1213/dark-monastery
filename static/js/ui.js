@@ -1,7 +1,7 @@
 /**
- * Тёмный Монастырь — UI Module
- * ==============================
- * All DOM rendering: state updates, story log, thinking indicator.
+ * Dark Monastery — UI Module (UNDERTALE-style)
+ * ==============================================
+ * HUD updates, stats menu, story log, thinking indicator.
  * Depends on: window.GameState, window.DarkFX
  */
 (function () {
@@ -16,118 +16,150 @@
   const actionInput = document.getElementById('actionInput');
 
   // ===============================================================
-  // STATE UPDATE — diff-based stat rendering
+  // HUD HELPERS
   // ===============================================================
 
-  function updateState(state, turnCount) {
-    const prev = GS.previousState;
+  /**
+   * Converts condition string to HP percentage for the bar.
+   */
+  function conditionToHP(condition) {
+    if (!condition) return { pct: 0.8, text: '??/20' };
+    var lower = condition.toLowerCase();
 
-    // --- Location ---
-    const locationEl = document.getElementById('statLocation');
-    if (locationEl.textContent !== (state.location || '—')) {
-      locationEl.textContent = state.location || '—';
-      FX.flashStat('statLocation');
-      if (prev && prev.location !== state.location) {
-        FX.locationTransition();
+    // Try to parse "Healthy (15/20)" format
+    var match = condition.match(/\((\d+)\s*\/\s*(\d+)\)/);
+    if (match) {
+      var cur = parseInt(match[1], 10);
+      var max = parseInt(match[2], 10);
+      return { pct: Math.min(1, cur / max), text: cur + '/' + max };
+    }
+
+    // Keyword mapping (English)
+    var map = [
+      { keys: ['healthy', 'unharmed', 'fine', 'fit'], pct: 1.0, text: '20/20' },
+      { keys: ['bruised', 'scratched', 'light', 'minor', 'slight'], pct: 0.8, text: '16/20' },
+      { keys: ['wounded', 'hurt', 'injured', 'bloody'], pct: 0.55, text: '11/20' },
+      { keys: ['severe', 'serious', 'badly', 'heavy', 'critical'], pct: 0.3, text: '6/20' },
+      { keys: ['dying', 'mortal', 'death', 'agon', 'fatal', 'dead'], pct: 0.12, text: '2/20' },
+    ];
+
+    for (var i = 0; i < map.length; i++) {
+      for (var j = 0; j < map[i].keys.length; j++) {
+        if (lower.indexOf(map[i].keys[j]) !== -1) {
+          return { pct: map[i].pct, text: map[i].text };
+        }
       }
     }
 
+    return { pct: 0.8, text: '??/20' };
+  }
+
+  function updateHUD(state) {
+    // HP bar
+    var hp = conditionToHP(state.condition);
+    var hpFill = document.getElementById('hpBarFill');
+    var hpText = document.getElementById('hpText');
+    if (hpFill) hpFill.style.width = (hp.pct * 100) + '%';
+    if (hpText) hpText.textContent = hp.text;
+
+    // Location
+    var locEl = document.getElementById('hudLocation');
+    if (locEl && state.location) {
+      locEl.textContent = state.location;
+    }
+
+    // Gold
+    var goldEl = document.getElementById('hudGold');
+    if (goldEl) {
+      goldEl.textContent = '☠ ' + (state.gold ?? 0);
+    }
+  }
+
+  // ===============================================================
+  // STATE UPDATE — diff-based, HUD + stats menu + sidebar
+  // ===============================================================
+
+  function setStatText(id, value) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = value;
+  }
+
+  function setBothText(modalId, sidebarId, value) {
+    setStatText(modalId, value);
+    setStatText(sidebarId, value);
+  }
+
+  function setHTML(id, html) {
+    var el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  }
+
+  function setBothHTML(modalId, sidebarId, html) {
+    setHTML(modalId, html);
+    setHTML(sidebarId, html);
+  }
+
+  function updateState(state, turnCount) {
+    var prev = GS.previousState;
+
+    // Update HUD
+    updateHUD(state);
+
+    // --- Location ---
+    setBothText('statLocation', 'sbLocation', state.location || '—');
+
     // --- Condition ---
-    const condEl = document.getElementById('statCondition');
-    if (condEl.textContent !== (state.condition || '—')) {
-      condEl.textContent = state.condition || '—';
+    var condEl = document.getElementById('statCondition');
+    if (condEl && condEl.textContent !== (state.condition || '—')) {
+      setBothText('statCondition', 'sbCondition', state.condition || '—');
       FX.flashStat('statCondition');
+      FX.flashStat('sbCondition');
     }
 
     // --- Sanity ---
-    const sanityEl = document.getElementById('statSanity');
-    const sanityIcon = document.getElementById('sanityIcon');
-    const sanity = state.sanity || '—';
-    if (sanityEl.textContent !== sanity) {
-      sanityEl.textContent = sanity;
-      FX.flashStat('statSanity');
-      const lower = sanity.toLowerCase();
-      sanityIcon.className = 'sanity-dot';
-      if (lower.includes('безум') || lower.includes('хаос') || lower.includes('грани')) {
-        sanityIcon.classList.add('sanity-dot--broken');
-      } else if (lower.includes('нестабил') || lower.includes('тревог') || lower.includes('паран')) {
-        sanityIcon.classList.add('sanity-dot--frayed');
-      }
-    }
+    setBothText('statSanity', 'sbSanity', state.sanity || '—');
 
     // --- Gold ---
-    const goldEl = document.getElementById('statGold');
-    const prevGold = prev ? (prev.gold ?? 0) : 0;
-    const newGold = state.gold ?? 0;
-
-    if (prevGold !== newGold) {
-      goldEl.textContent = newGold;
-
-      if (newGold > prevGold) {
-        FX.flashStat('statGold');
-        const goldRect = goldEl.getBoundingClientRect();
-        FX.goldSparkles(goldRect.left + goldRect.width / 2, goldRect.top + goldRect.height / 2, 6);
-        FX.floatingNumber(goldRect.left + goldRect.width / 2, goldRect.top, '+' + (newGold - prevGold), 'gold');
+    var goldEl = document.getElementById('statGold');
+    var prevGold = prev ? (prev.gold ?? 0) : 0;
+    var newGold = state.gold ?? 0;
+    if (goldEl) {
+      if (prevGold !== newGold) {
+        setBothText('statGold', 'sbGold', newGold);
+        if (newGold > prevGold) {
+          FX.flashStat('statGold');
+          FX.flashStat('sbGold');
+        } else {
+          FX.flashStat('statGold', 'damage');
+          FX.flashStat('sbGold', 'damage');
+        }
       } else {
-        FX.flashStat('statGold', 'damage');
+        setBothText('statGold', 'sbGold', newGold);
       }
-    } else {
-      goldEl.textContent = newGold;
     }
 
     // --- Equipped ---
-    const eqEl = document.getElementById('statEquipped');
-    if (eqEl.textContent !== (state.equipped || '—')) {
-      eqEl.textContent = state.equipped || '—';
+    var eqEl = document.getElementById('statEquipped');
+    if (eqEl && eqEl.textContent !== (state.equipped || '—')) {
+      setBothText('statEquipped', 'sbEquipped', state.equipped || '—');
       FX.flashStat('statEquipped');
-      FX.runeFlash();
+      FX.flashStat('sbEquipped');
     }
 
     // --- Inventory ---
-    const invList = document.getElementById('statInventory');
-    const newInv = (state.inventory || []).map(i => esc(i));
-    invList.innerHTML = newInv.map(i => `<li>${i}</li>`).join('');
-
-    if (prev) {
-      const prevInv = prev.inventory || [];
-      const addedItems = (state.inventory || []).filter(i => !prevInv.includes(i));
-      if (addedItems.length > 0) {
-        FX.questBanner('🗡 ' + addedItems.join(', '));
-      }
-    }
+    var newInv = (state.inventory || []).map(function (i) { return esc(i); });
+    var invHTML = newInv.map(function (i) { return '<li>' + i + '</li>'; }).join('');
+    setBothHTML('statInventory', 'sbInventory', invHTML);
 
     // --- Skills ---
-    const skillsList = document.getElementById('statSkills');
-    const newSkills = (state.skills || []).map(s => esc(s));
-    skillsList.innerHTML = newSkills.map(s => `<li>${s}</li>`).join('');
-
-    if (prev) {
-      const prevSkills = prev.skills || [];
-      const addedSkills = (state.skills || []).filter(s => !prevSkills.includes(s));
-      if (addedSkills.length > 0) {
-        FX.levelUpRays();
-        FX.questBanner('✦ Навык: ' + addedSkills.join(', '));
-      }
-    }
+    var newSkills = (state.skills || []).map(function (s) { return esc(s); });
+    var skillsHTML = newSkills.map(function (s) { return '<li>' + s + '</li>'; }).join('');
+    setBothHTML('statSkills', 'sbSkills', skillsHTML);
 
     // --- Quests ---
-    const questList = document.getElementById('statQuests');
-    const newQuests = (state.active_quests || []).map(q => esc(q));
-    questList.innerHTML = newQuests.map(q => `<li>${q}</li>`).join('');
-
-    if (prev) {
-      const prevQuests = prev.active_quests || [];
-      const completedQuests = prevQuests.filter(q => !(state.active_quests || []).includes(q));
-      completedQuests.forEach(() => {
-        FX.questBanner('⚔ Квест выполнен!');
-        FX.levelUpRays();
-      });
-
-      const addedQuests = (state.active_quests || []).filter(q => !prevQuests.includes(q));
-      if (addedQuests.length > 0) {
-        FX.questBanner('📜 Новый квест');
-      }
-    }
+    var newQuests = (state.active_quests || []).map(function (q) { return esc(q); });
+    var questHTML = newQuests.map(function (q) { return '<li>' + q + '</li>'; }).join('');
+    setBothHTML('statQuests', 'sbQuests', questHTML);
 
     // Store for next diff
     GS.previousState = JSON.parse(JSON.stringify(state));
@@ -138,30 +170,30 @@
   // ===============================================================
 
   function addStoryEntry(text, isResponse, isAction, isError) {
-    const placeholder = storyInner.querySelector('.story-placeholder');
+    var placeholder = storyInner.querySelector('.story-placeholder');
     if (placeholder) placeholder.remove();
 
-    const entry = document.createElement('div');
+    var entry = document.createElement('div');
     entry.className = 'story-entry';
 
     if (isAction) {
-      const actionEl = document.createElement('div');
+      var actionEl = document.createElement('div');
       actionEl.className = 'story-action';
       actionEl.textContent = text;
       entry.appendChild(actionEl);
     } else if (isError) {
-      const msgEl = document.createElement('div');
+      var msgEl = document.createElement('div');
       msgEl.className = 'story-message story-message--error';
       msgEl.textContent = text;
       entry.appendChild(msgEl);
     } else {
-      const msgEl = document.createElement('div');
-      msgEl.className = isResponse ? 'story-message story-message--first' : 'story-message story-message--system';
+      var msgEl = document.createElement('div');
+      msgEl.className = isResponse ? 'story-message' : 'story-message story-message--system';
 
-      if (isResponse && text.length > 30) {
+      if (isResponse && text.length > 25) {
         entry.appendChild(msgEl);
         storyInner.appendChild(entry);
-        FX.typewriterText(msgEl, text, 12);
+        FX.typewriterText(msgEl, text, 50);
         scrollToBottom();
         enableInput();
         return;
@@ -181,7 +213,7 @@
   }
 
   function scrollToBottom() {
-    setTimeout(() => {
+    setTimeout(function () {
       storyLog.scrollTop = storyLog.scrollHeight;
     }, 50);
   }
@@ -207,6 +239,20 @@
   }
 
   // ===============================================================
+  // STATS MENU (dossier)
+  // ===============================================================
+
+  function openStatsMenu() {
+    var overlay = document.getElementById('statsOverlay');
+    if (overlay) overlay.hidden = false;
+  }
+
+  function closeStatsMenu() {
+    var overlay = document.getElementById('statsOverlay');
+    if (overlay) overlay.hidden = true;
+  }
+
+  // ===============================================================
   // HELPERS
   // ===============================================================
 
@@ -219,7 +265,7 @@
   }
 
   // ===============================================================
-  // EXPOSE PUBLIC API
+  // PUBLIC API
   // ===============================================================
 
   window.GameUI = {
@@ -228,6 +274,8 @@
     updateThinking: updateThinking,
     scrollToBottom: scrollToBottom,
     enableInput: enableInput,
+    openStatsMenu: openStatsMenu,
+    closeStatsMenu: closeStatsMenu,
   };
 
 })();

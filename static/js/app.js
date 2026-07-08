@@ -1,6 +1,6 @@
 /**
- * Тёмный Монастырь — Application Entry Point
- * ============================================
+ * Dark Monastery — Application Entry Point (UNDERTALE-style)
+ * ============================================================
  * Session management, event wiring, initialization.
  * Depends on: window.DarkFX, window.GameState, window.GameWS, window.GameUI
  */
@@ -41,19 +41,10 @@
       UI.addStoryEntry(data.state.message, true);
       GS.currentTurnCount = data.turn_count;
 
-      // Grand entrance effect
-      FX.particleBurst(window.innerWidth / 2, window.innerHeight / 2, {
-        count: 26,
-        color: { r: 160, g: 158, b: 150 },
-        speed: 2.2,
-        size: 1.4,
-        life: 70,
-        glow: false,
-      });
-
+      UI.closeStatsMenu();
       WS.connect();
     } catch (err) {
-      UI.addStoryEntry('⚠ Ошибка: ' + err.message, false, false, true);
+      UI.addStoryEntry('⚠ Error: ' + err.message, false, false, true);
     }
   }
 
@@ -69,12 +60,10 @@
       const data = await resp.json();
 
       if (data.status === 'ok') {
-        UI.addStoryEntry('💾 Игра сохранена в свиток.', false, false, false);
-        FX.runeFlash();
-        FX.questBanner('💾 Сохранено');
+        UI.addStoryEntry('💾 Game saved.', false, false, false);
       }
     } catch (err) {
-      UI.addStoryEntry('⚠ Ошибка сохранения: ' + err.message, false, false, true);
+      UI.addStoryEntry('⚠ Save error: ' + err.message, false, false, true);
     }
   }
 
@@ -97,17 +86,16 @@
       storyInner.innerHTML = '';
 
       UI.updateState(data.state, data.turn_count);
-      UI.addStoryEntry('📂 Свиток загружен.', false, false, false);
+      UI.addStoryEntry('📂 Game loaded.', false, false, false);
       UI.addStoryEntry(data.state.message, true);
+      UI.renderChoices(data.state.choices || []);
       GS.currentTurnCount = data.turn_count;
 
-      FX.runeFlash();
-      FX.locationTransition();
-
+      UI.closeStatsMenu();
       WS.connect();
       closeSavesModal();
     } catch (err) {
-      UI.addStoryEntry('⚠ Ошибка загрузки: ' + err.message, false, false, true);
+      UI.addStoryEntry('⚠ Load error: ' + err.message, false, false, true);
     }
   }
 
@@ -118,23 +106,23 @@
       const saves = data.saves || [];
 
       if (saves.length === 0) {
-        savesList.innerHTML = '<p style="color:var(--stone);text-align:center;padding:1rem;">Свитков сохранений не найдено</p>';
+        savesList.innerHTML = '<p style="color:var(--text-dark);text-align:center;padding:1rem;">No scrolls found</p>';
       } else {
-        savesList.innerHTML = saves.map(s => `
-          <div class="save-item" data-id="${esc(s.session_id)}">
-            <span class="save-item__info">${esc(s.location)} — ход ${s.turn_count}</span>
-            <span class="save-item__meta">${esc(s.session_id)}</span>
-          </div>
-        `).join('');
+        savesList.innerHTML = saves.map(function (s) {
+          return '<div class="save-item" data-id="' + esc(s.session_id) + '">' +
+            '<span class="save-item__info">' + esc(s.location) + ' — turn ' + s.turn_count + '</span>' +
+            '<span class="save-item__meta">' + esc(s.session_id) + '</span>' +
+            '</div>';
+        }).join('');
 
-        savesList.querySelectorAll('.save-item').forEach(el => {
-          el.addEventListener('click', () => loadGame(el.dataset.id));
+        savesList.querySelectorAll('.save-item').forEach(function (el) {
+          el.addEventListener('click', function () { loadGame(el.dataset.id); });
         });
       }
 
       savesModal.hidden = false;
     } catch (err) {
-      UI.addStoryEntry('⚠ Ошибка: ' + err.message, false, false, true);
+      UI.addStoryEntry('⚠ Error: ' + err.message, false, false, true);
     }
   }
 
@@ -147,34 +135,33 @@
   // ===============================================================
 
   function showConfirm(title, text) {
-    return new Promise(resolve => {
+    return new Promise(function (resolve) {
       const overlay = document.createElement('div');
       overlay.className = 'confirm-overlay';
 
-      overlay.innerHTML = `
-        <div class="confirm-dialog">
-          <div class="confirm-dialog__title">${esc(title)}</div>
-          <div class="confirm-dialog__text">${esc(text)}</div>
-          <div class="confirm-dialog__buttons">
-            <button class="cmd-btn cmd-btn--danger" id="confirmYes">Да</button>
-            <button class="cmd-btn" id="confirmNo">Отмена</button>
-          </div>
-        </div>
-      `;
+      overlay.innerHTML =
+        '<div class="confirm-dialog">' +
+        '<div class="confirm-dialog__title">' + esc(title) + '</div>' +
+        '<div class="confirm-dialog__text">' + esc(text) + '</div>' +
+        '<div class="confirm-dialog__buttons">' +
+        '<button class="cmd-btn cmd-btn--danger" id="confirmYes">Yes</button>' +
+        '<button class="cmd-btn" id="confirmNo">Cancel</button>' +
+        '</div>' +
+        '</div>';
 
       document.body.appendChild(overlay);
 
-      overlay.querySelector('#confirmYes').addEventListener('click', () => {
+      overlay.querySelector('#confirmYes').addEventListener('click', function () {
         overlay.remove();
         resolve(true);
       });
 
-      overlay.querySelector('#confirmNo').addEventListener('click', () => {
+      overlay.querySelector('#confirmNo').addEventListener('click', function () {
         overlay.remove();
         resolve(false);
       });
 
-      overlay.addEventListener('click', e => {
+      overlay.addEventListener('click', function (e) {
         if (e.target === overlay) {
           overlay.remove();
           resolve(false);
@@ -187,21 +174,20 @@
   // EVENT LISTENERS
   // ===============================================================
 
-  actionForm.addEventListener('submit', e => {
+  actionForm.addEventListener('submit', function (e) {
     e.preventDefault();
     if (GS.isThinking) return;
     WS.sendAction(actionInput.value);
   });
 
-  document.getElementById('btnNewGame').addEventListener('click', async () => {
+  document.getElementById('btnNewGame').addEventListener('click', async function () {
     const confirmed = await showConfirm(
-      'Новая игра',
-      'Начать новое приключение? Текущий прогресс будет утерян в тумане.'
+      'New Game',
+      'Begin a new adventure? Current progress will be lost.'
     );
     if (confirmed) {
       FX.screenShake(2);
-      FX.bloodVignette();
-      setTimeout(() => newGame(), 300);
+      setTimeout(function () { newGame(); }, 300);
     }
   });
 
@@ -209,13 +195,39 @@
   document.getElementById('btnLoad').addEventListener('click', showSaves);
   document.getElementById('btnCloseModal').addEventListener('click', closeSavesModal);
 
-  savesModal.addEventListener('click', e => {
+  savesModal.addEventListener('click', function (e) {
     if (e.target === savesModal) closeSavesModal();
   });
 
-  document.addEventListener('keydown', e => {
+  // Stats menu
+  document.getElementById('btnMenu').addEventListener('click', function () {
+    UI.openStatsMenu();
+  });
+
+  document.getElementById('btnCloseStats').addEventListener('click', function () {
+    UI.closeStatsMenu();
+  });
+
+  // Close stats overlay by clicking outside
+  var statsOverlay = document.getElementById('statsOverlay');
+  if (statsOverlay) {
+    statsOverlay.addEventListener('click', function (e) {
+      if (e.target === statsOverlay) UI.closeStatsMenu();
+    });
+  }
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
-      if (!savesModal.hidden) closeSavesModal();
+      var statsOverlay = document.getElementById('statsOverlay');
+      if (statsOverlay && !statsOverlay.hidden) {
+        UI.closeStatsMenu();
+        return;
+      }
+      if (!savesModal.hidden) {
+        closeSavesModal();
+        return;
+      }
     }
   });
 

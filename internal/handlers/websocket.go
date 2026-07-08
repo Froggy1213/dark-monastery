@@ -18,25 +18,25 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-// wsMessage — сообщение от клиента.
+// wsMessage — message from the client.
 type wsMessage struct {
 	Type      string `json:"type"`
 	Text      string `json:"text"`
 	SessionID string `json:"session_id"`
 }
 
-// wsResponse — ответ клиенту.
+// wsResponse — response to the client.
 type wsResponse struct {
 	Type      string          `json:"type"`
 	State     *game.GameState `json:"state,omitempty"`
-	TurnCount int             `json:"turn_count,omitempty"`
+	TurnCount int             `json:"turn_count"`
 	Message   string          `json:"message,omitempty"`
 }
 
 func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("Ошибка WebSocket upgrade: %v", err)
+		log.Printf("WebSocket upgrade error: %v", err)
 		return
 	}
 	defer conn.Close()
@@ -55,9 +55,21 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		s.mu.Lock()
 		s.sessions[sessionID] = sess
 		s.mu.Unlock()
+
+		// Auto-generate first turn with AI
+		newState, err := s.processActionWithMemory(r.Context(), sess, "START")
+		if err != nil {
+			log.Printf("First turn generation error: %v", err)
+		} else {
+			sess.State = newState
+			sess.TurnCount++
+			if sess.Memory != nil {
+				sess.Memory.Add("START", newState.Message, newState.Location)
+			}
+		}
 	}
 
-	// Текущее состояние
+	// Current state
 	writeWS(conn, wsResponse{
 		Type:      "update",
 		State:     sess.State,
@@ -71,7 +83,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		var msg wsMessage
 		if err := conn.ReadJSON(&msg); err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
-				log.Printf("WebSocket ошибка: %v", err)
+				log.Printf("WebSocket error: %v", err)
 			}
 			break
 		}
@@ -82,30 +94,30 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 		case "action":
 			if msg.Text == "" {
-				writeWS(conn, wsResponse{Type: "error", Message: "Пустое действие"})
+				writeWS(conn, wsResponse{Type: "error", Message: "Empty action"})
 				continue
 			}
 
-			writeWS(conn, wsResponse{Type: "thinking", Message: "ИИ думает..."})
+			writeWS(conn, wsResponse{Type: "thinking", Message: "AI is thinking..."})
 
-			// RAG: строим контекст памяти и вызываем AI
+			// RAG: build memory context and call AI
 			newState, err := s.processActionWithMemory(ctx, sess, msg.Text)
 			if err != nil {
-				log.Printf("Ошибка AI: %v", err)
-				writeWS(conn, wsResponse{Type: "error", Message: "Ошибка нейросети: " + err.Error()})
+				log.Printf("AI error: %v", err)
+				writeWS(conn, wsResponse{Type: "error", Message: "AI error: " + err.Error()})
 				continue
 			}
 
 			sess.TurnCount++
 
-			// RAG: сохраняем в обе памяти
+			// RAG: save to both memories
 			if sess.Memory != nil {
 				sess.Memory.Add(msg.Text, newState.Message, newState.Location)
 			}
 
 			sess.State = newState
 
-			// Автосохранение (файловое)
+			// Auto-save (file)
 			meta := &storage.SaveMeta{
 				SessionID:  sessionID,
 				PlayerName: game.DefaultPlayerName,
@@ -122,13 +134,13 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			})
 
 		default:
-			writeWS(conn, wsResponse{Type: "error", Message: "Неизвестный тип: " + msg.Type})
+			writeWS(conn, wsResponse{Type: "error", Message: "Unknown type: " + msg.Type})
 		}
 	}
 }
 
 func writeWS(conn *websocket.Conn, resp wsResponse) {
 	if err := conn.WriteJSON(resp); err != nil {
-		log.Printf("Ошибка отправки WebSocket: %v", err)
+		log.Printf("WebSocket send error: %v", err)
 	}
 }

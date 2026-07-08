@@ -9,7 +9,7 @@ import (
 	"dark-monastery/internal/storage"
 )
 
-// --- Обработчики сохранений ---
+// --- Save handlers ---
 
 func (s *Server) handleSaves(w http.ResponseWriter, r *http.Request) {
 	saves, err := s.fileStore.List()
@@ -25,7 +25,7 @@ func (s *Server) handleSaves(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleSave(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
+		http.Error(w, "Method not supported", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -33,7 +33,7 @@ func (s *Server) handleSave(w http.ResponseWriter, r *http.Request) {
 		SessionID string `json:"session_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Невалидный JSON"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
 
@@ -42,7 +42,7 @@ func (s *Server) handleSave(w http.ResponseWriter, r *http.Request) {
 	s.mu.RUnlock()
 
 	if !ok {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Сессия не найдена"})
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Session not found"})
 		return
 	}
 
@@ -62,7 +62,7 @@ func (s *Server) handleSave(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleLoad(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
+		http.Error(w, "Method not supported", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -70,20 +70,20 @@ func (s *Server) handleLoad(w http.ResponseWriter, r *http.Request) {
 		SessionID string `json:"session_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Невалидный JSON"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
 
 	state := &game.GameState{}
 	meta, records, err := s.fileStore.LoadWithHistory(req.SessionID, state)
 	if err != nil {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Сохранение не найдено: " + err.Error()})
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Save not found: " + err.Error()})
 		return
 	}
 
 	mem := s.createMemoryManager(req.SessionID)
 	if mem != nil {
-		// Восстанавливаем краткосрочную память из последних записей файлового сохранения
+		// Restore short-term memory from the last records of the file save
 		for _, r := range records {
 			mem.ShortTermHistory().Add(r.PlayerAction, r.AIResponse)
 		}

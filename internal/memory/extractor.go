@@ -7,17 +7,17 @@ import (
 	"time"
 )
 
-// ExtractJob — задание для асинхронного извлечения и сохранения воспоминания.
+// ExtractJob — a task for asynchronous extraction and saving of a memory.
 type ExtractJob struct {
 	SessionID  string
 	TurnNumber int
-	Content    string // "Действие: X | Ответ: Y"
+	Content    string // "Action: X | Response: Y"
 	Location   string
 	ActionType string // "turn", "lore", "quest", "death"
 }
 
-// Extractor — фоновый воркер для асинхронной генерации эмбеддингов
-// и сохранения воспоминаний в pgvector.
+// Extractor — a background worker for asynchronous embedding generation
+// and saving memories to pgvector.
 type Extractor struct {
 	queue       chan ExtractJob
 	embedClient EmbeddingProvider
@@ -27,20 +27,20 @@ type Extractor struct {
 	cancel      context.CancelFunc
 }
 
-// NewExtractor создаёт новый экстрактор с заданным количеством воркеров.
+// NewExtractor creates a new extractor with the given number of workers.
 func NewExtractor(embedClient EmbeddingProvider, store MemoryStore, workers int) *Extractor {
 	if workers < 1 {
 		workers = 1
 	}
 	return &Extractor{
-		queue:       make(chan ExtractJob, 100), // буфер на 100 заданий
+		queue:       make(chan ExtractJob, 100), // buffer of 100 jobs
 		embedClient: embedClient,
 		store:       store,
 		workers:     workers,
 	}
 }
 
-// Start запускает N воркеров для обработки заданий.
+// Start starts N workers to process jobs.
 func (e *Extractor) Start(ctx context.Context) {
 	ctx, e.cancel = context.WithCancel(ctx)
 
@@ -49,35 +49,35 @@ func (e *Extractor) Start(ctx context.Context) {
 		go e.worker(ctx, i)
 	}
 
-	// Фоновый пересчёт pending embeddings каждые 30 секунд
+	// Background retry loop for pending embeddings every 30 seconds
 	e.wg.Add(1)
 	go e.retryLoop(ctx)
 
-	log.Printf("[Extractor] Запущено %d воркеров", e.workers)
+	log.Printf("[Extractor] Started %d workers", e.workers)
 }
 
-// Submit отправляет задание в очередь (неблокирующий).
+// Submit sends a job to the queue (non-blocking).
 func (e *Extractor) Submit(job ExtractJob) {
 	select {
 	case e.queue <- job:
 	default:
-		// Очередь полна — сохраняем без эмбеддинга
-		log.Printf("[Extractor] Очередь полна, сохраняем без эмбеддинга: session=%s turn=%d",
+		// Queue is full — save without embedding
+		log.Printf("[Extractor] Queue full, saving without embedding: session=%s turn=%d",
 			job.SessionID, job.TurnNumber)
 		go e.saveWithoutEmbedding(context.Background(), job)
 	}
 }
 
-// Stop останавливает все воркеры и ждёт завершения.
+// Stop stops all workers and waits for completion.
 func (e *Extractor) Stop() {
 	if e.cancel != nil {
 		e.cancel()
 	}
 	e.wg.Wait()
-	log.Println("[Extractor] Остановлен")
+	log.Println("[Extractor] Stopped")
 }
 
-// worker обрабатывает задания из очереди.
+// worker processes jobs from the queue.
 func (e *Extractor) worker(ctx context.Context, id int) {
 	defer e.wg.Done()
 
@@ -86,7 +86,7 @@ func (e *Extractor) worker(ctx context.Context, id int) {
 		case job := <-e.queue:
 			e.processJob(ctx, job)
 		case <-ctx.Done():
-			// Дообрабатываем оставшиеся в очереди
+			// Process remaining jobs in the queue
 			for {
 				select {
 				case job := <-e.queue:
@@ -99,7 +99,7 @@ func (e *Extractor) worker(ctx context.Context, id int) {
 	}
 }
 
-// processJob обрабатывает одно задание: генерирует эмбеддинг и сохраняет.
+// processJob processes a single job: generates an embedding and saves.
 func (e *Extractor) processJob(ctx context.Context, job ExtractJob) {
 	mem := &Memory{
 		SessionID:  job.SessionID,
@@ -110,10 +110,10 @@ func (e *Extractor) processJob(ctx context.Context, job ExtractJob) {
 		CreatedAt:  time.Now(),
 	}
 
-	// Пытаемся получить эмбеддинг
+	// Try to get the embedding
 	embedding, err := e.embedClient.Embed(ctx, job.Content)
 	if err != nil {
-		log.Printf("[Extractor] Ошибка embedding (session=%s turn=%d): %v — сохраняем без вектора",
+		log.Printf("[Extractor] Embedding error (session=%s turn=%d): %v — saving without vector",
 			job.SessionID, job.TurnNumber, err)
 		mem.Embedded = false
 	} else {
@@ -121,14 +121,14 @@ func (e *Extractor) processJob(ctx context.Context, job ExtractJob) {
 		mem.Embedded = true
 	}
 
-	// Сохраняем в PostgreSQL
+	// Save to PostgreSQL
 	if err := e.store.InsertMemory(ctx, mem); err != nil {
-		log.Printf("[Extractor] Ошибка сохранения (session=%s turn=%d): %v",
+		log.Printf("[Extractor] Save error (session=%s turn=%d): %v",
 			job.SessionID, job.TurnNumber, err)
 	}
 }
 
-// saveWithoutEmbedding сохраняет запись без вектора (fallback).
+// saveWithoutEmbedding saves a record without a vector (fallback).
 func (e *Extractor) saveWithoutEmbedding(ctx context.Context, job ExtractJob) {
 	mem := &Memory{
 		SessionID:  job.SessionID,
@@ -140,11 +140,11 @@ func (e *Extractor) saveWithoutEmbedding(ctx context.Context, job ExtractJob) {
 		CreatedAt:  time.Now(),
 	}
 	if err := e.store.InsertMemory(ctx, mem); err != nil {
-		log.Printf("[Extractor] Ошибка fallback сохранения: %v", err)
+		log.Printf("[Extractor] Fallback save error: %v", err)
 	}
 }
 
-// retryLoop периодически пересчитывает эмбеддинги для записей с embedded=false.
+// retryLoop periodically recalculates embeddings for records with embedded=false.
 func (e *Extractor) retryLoop(ctx context.Context) {
 	defer e.wg.Done()
 
@@ -161,11 +161,11 @@ func (e *Extractor) retryLoop(ctx context.Context) {
 	}
 }
 
-// retryPending пересчитывает эмбеддинги для pending записей.
+// retryPending recalculates embeddings for pending records.
 func (e *Extractor) retryPending(ctx context.Context) {
 	pending, err := e.store.PendingEmbeddings(ctx, 10)
 	if err != nil {
-		log.Printf("[Extractor] Ошибка загрузки pending: %v", err)
+		log.Printf("[Extractor] Error loading pending: %v", err)
 		return
 	}
 
@@ -173,7 +173,7 @@ func (e *Extractor) retryPending(ctx context.Context) {
 		return
 	}
 
-	log.Printf("[Extractor] Пересчитываем %d pending эмбеддингов", len(pending))
+	log.Printf("[Extractor] Recalculating %d pending embeddings", len(pending))
 
 	for _, m := range pending {
 		select {
@@ -184,12 +184,12 @@ func (e *Extractor) retryPending(ctx context.Context) {
 
 		embedding, err := e.embedClient.Embed(ctx, m.Content)
 		if err != nil {
-			log.Printf("[Extractor] Ошибка retry embedding (id=%d): %v", m.ID, err)
+			log.Printf("[Extractor] Retry embedding error (id=%d): %v", m.ID, err)
 			continue
 		}
 
 		if err := e.store.UpdateEmbedding(ctx, m.ID, embedding); err != nil {
-			log.Printf("[Extractor] Ошибка retry update (id=%d): %v", m.ID, err)
+			log.Printf("[Extractor] Retry update error (id=%d): %v", m.ID, err)
 		}
 	}
 }

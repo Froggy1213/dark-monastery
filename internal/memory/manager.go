@@ -7,10 +7,10 @@ import (
 	"strings"
 )
 
-// MemoryManager объединяет краткосрочную (ring buffer) и долгосрочную (pgvector) память.
-// Это основной фасад, с которым работают хендлеры.
+// MemoryManager combines short-term (ring buffer) and long-term (pgvector) memory.
+// This is the main facade that handlers work with.
 type MemoryManager struct {
-	shortTerm   *History          // кольцевой буфер, 3 хода
+	shortTerm   *History          // ring buffer, 3 turns
 	store       MemoryStore       // pgvector (storage.PgStore)
 	embedClient EmbeddingProvider // ai.EmbeddingClient
 	extractor   *Extractor        // async pipeline
@@ -18,7 +18,7 @@ type MemoryManager struct {
 	turnCounter int
 }
 
-// NewMemoryManager создаёт новый менеджер памяти для сессии.
+// NewMemoryManager creates a new memory manager for a session.
 func NewMemoryManager(
 	store MemoryStore,
 	embedClient EmbeddingProvider,
@@ -26,7 +26,7 @@ func NewMemoryManager(
 	sessionID string,
 ) *MemoryManager {
 	return &MemoryManager{
-		shortTerm:   NewHistory(3), // краткосрочная: последние 3 хода
+		shortTerm:   NewHistory(3), // short-term: last 3 turns
 		store:       store,
 		embedClient: embedClient,
 		extractor:   extractor,
@@ -35,22 +35,22 @@ func NewMemoryManager(
 	}
 }
 
-// Add сохраняет ход в обе памяти:
-// 1. Краткосрочная — ring buffer (мгновенно)
-// 2. Долгосрочная — через async extractor → pgvector (фоном)
+// Add saves a turn to both memories:
+// 1. Short-term — ring buffer (instant)
+// 2. Long-term — via async extractor -> pgvector (background)
 func (m *MemoryManager) Add(action, response, location string) {
 	m.turnCounter++
 
-	// Краткосрочная
+	// Short-term
 	m.shortTerm.Add(action, response)
 
-	// Долгосрочная — формируем текст для embedding
-	content := fmt.Sprintf("Действие: %s | Ответ: %s", action, truncate(response, 500))
+	// Long-term — build text for embedding
+	content := fmt.Sprintf("Action: %s | Response: %s", action, truncate(response, 500))
 
-	// Определяем тип действия
+	// Determine action type
 	actionType := classifyAction(action, response)
 
-	// Отправляем в async pipeline
+	// Submit to async pipeline
 	if m.extractor != nil {
 		m.extractor.Submit(ExtractJob{
 			SessionID:  m.sessionID,
@@ -62,41 +62,41 @@ func (m *MemoryManager) Add(action, response, location string) {
 	}
 }
 
-// BuildContext формирует текстовый контекст памяти для промпта AI.
-// Синхронный — выполняет поиск в pgvector.
+// BuildContext builds a text memory context for the AI prompt.
+// Synchronous — performs a search in pgvector.
 //
-// Возвращает строку вида:
+// Returns a string of the form:
 //
-//	КРАТКОСРОЧНАЯ ПАМЯТЬ: ...
-//	ДОЛГОСРОЧНАЯ ПАМЯТЬ: ...
+//	SHORT-TERM MEMORY: ...
+//	LONG-TERM MEMORY: ...
 func (m *MemoryManager) BuildContext(ctx context.Context, currentAction, currentLocation string) (string, error) {
 	var sb strings.Builder
 
-	// 1. Краткосрочная память — последние 3 хода
+	// 1. Short-term memory — last 3 turns
 	shortCtx := m.shortTerm.RecentContext(3)
 	if shortCtx != "" {
-		sb.WriteString("КРАТКОСРОЧНАЯ ПАМЯТЬ (последние события):\n")
+		sb.WriteString("SHORT-TERM MEMORY (recent events):\n")
 		sb.WriteString(shortCtx)
 		sb.WriteString("\n")
 	}
 
-	// 2. Долгосрочная память — семантический поиск по pgvector
+	// 2. Long-term memory — semantic search via pgvector
 	if m.store != nil && m.embedClient != nil {
-		queryText := fmt.Sprintf("Локация: %s. Действие игрока: %s", currentLocation, currentAction)
+		queryText := fmt.Sprintf("Location: %s. Player action: %s", currentLocation, currentAction)
 
 		queryEmbedding, err := m.embedClient.Embed(ctx, queryText)
 		if err != nil {
-			log.Printf("[MemoryManager] Ошибка embedding запроса: %v — используем только краткосрочную память", err)
+			log.Printf("[MemoryManager] Embedding query error: %v — using only short-term memory", err)
 			return sb.String(), nil // graceful fallback
 		}
 
 		memories, err := m.store.SearchSimilar(ctx, queryEmbedding, m.sessionID, 5)
 		if err != nil {
-			log.Printf("[MemoryManager] Ошибка поиска в pgvector: %v", err)
+			log.Printf("[MemoryManager] pgvector search error: %v", err)
 			return sb.String(), nil // graceful fallback
 		}
 
-		// Фильтруем — не дублируем то, что уже в краткосрочной памяти
+		// Filter — don't duplicate what's already in short-term memory
 		recentTurns := make(map[int]bool)
 		for i := m.turnCounter; i > m.turnCounter-3 && i > 0; i-- {
 			recentTurns[i] = true
@@ -110,84 +110,84 @@ func (m *MemoryManager) BuildContext(ctx context.Context, currentAction, current
 		}
 
 		if len(longTermMemories) > 0 {
-			sb.WriteString("ДОЛГОСРОЧНАЯ ПАМЯТЬ (релевантные воспоминания из прошлого):\n")
+			sb.WriteString("LONG-TERM MEMORY (relevant past memories):\n")
 			for _, mem := range longTermMemories {
-				sb.WriteString(fmt.Sprintf("[Ход %d, %s, совпадение: %.2f] %s\n",
+				sb.WriteString(fmt.Sprintf("[Turn %d, %s, similarity: %.2f] %s\n",
 					mem.TurnNumber, mem.Location, mem.Similarity, mem.Content))
 			}
-			sb.WriteString("\nИспользуй долгосрочную память для поддержания непрерывности сюжета и мира.\n")
+			sb.WriteString("\nUse long-term memory to maintain narrative continuity and world consistency.\n")
 		}
 	}
 
 	return sb.String(), nil
 }
 
-// SetSession переключает менеджер на другую сессию.
+// SetSession switches the manager to a different session.
 func (m *MemoryManager) SetSession(sessionID string) {
 	m.sessionID = sessionID
 	m.shortTerm.Clear()
 	m.turnCounter = 0
 }
 
-// SetTurnCounter устанавливает счётчик ходов (при загрузке сохранения).
+// SetTurnCounter sets the turn counter (when loading a save).
 func (m *MemoryManager) SetTurnCounter(n int) {
 	m.turnCounter = n
 }
 
-// Clear очищает краткосрочную память. Долгосрочная остаётся в PostgreSQL.
+// Clear clears short-term memory. Long-term memory stays in PostgreSQL.
 func (m *MemoryManager) Clear() {
 	m.shortTerm.Clear()
 	m.turnCounter = 0
 }
 
-// SessionID возвращает текущий ID сессии.
+// SessionID returns the current session ID.
 func (m *MemoryManager) SessionID() string {
 	return m.sessionID
 }
 
-// TurnCounter возвращает текущий номер хода.
+// TurnCounter returns the current turn number.
 func (m *MemoryManager) TurnCounter() int {
 	return m.turnCounter
 }
 
-// --- Реализация game.HistoryProvider (обратная совместимость) ---
+// --- Implementation of game.HistoryProvider (backward compatibility) ---
 
-// RecentContext возвращает последние N ходов из краткосрочной памяти.
+// RecentContext returns the last N turns from short-term memory.
 func (m *MemoryManager) RecentContext(n int) string {
 	return m.shortTerm.RecentContext(n)
 }
 
-// Len возвращает количество записей в краткосрочной памяти.
+// Len returns the number of entries in short-term memory.
 func (m *MemoryManager) Len() int {
 	return m.shortTerm.Len()
 }
 
-// ShortTermHistory возвращает доступ к краткосрочной истории.
+// ShortTermHistory returns access to the short-term history.
 func (m *MemoryManager) ShortTermHistory() *History {
 	return m.shortTerm
 }
 
-// --- Вспомогательные функции ---
+// --- Helper functions ---
 
-// classifyAction определяет тип действия на основе ключевых слов.
+// classifyAction determines the action type based on keywords.
 func classifyAction(action, response string) string {
 	lower := strings.ToLower(action + " " + response)
 
-	if strings.Contains(lower, "смерт") || strings.Contains(lower, "погиб") || strings.Contains(lower, "умер") {
+	if strings.Contains(lower, "death") || strings.Contains(lower, "perish") || strings.Contains(lower, "die") {
 		return "death"
 	}
-	if strings.Contains(lower, "квест") || strings.Contains(lower, "задан") || strings.Contains(lower, "миссия") {
+	if strings.Contains(lower, "quest") || strings.Contains(lower, "task") || strings.Contains(lower, "mission") {
 		return "quest"
 	}
-	if strings.Contains(lower, "легенд") || strings.Contains(lower, "истори") || strings.Contains(lower, "лор") ||
-		strings.Contains(lower, "древн") || strings.Contains(lower, "свиток") || strings.Contains(lower, "книг") {
+	if strings.Contains(lower, "legend") || strings.Contains(lower, "history") || strings.Contains(lower, "lore") ||
+		strings.Contains(lower, "ancient") || strings.Contains(lower, "scroll") || strings.Contains(lower, "book") {
 		return "lore"
 	}
 
 	return "turn"
 }
 
-// truncate обрезает строку до maxLen символов.
+// truncate truncates a string to maxLen characters.
 func truncate(s string, maxLen int) string {
 	runes := []rune(s)
 	if len(runes) <= maxLen {

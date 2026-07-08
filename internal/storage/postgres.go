@@ -14,8 +14,8 @@ import (
 	"github.com/pgvector/pgvector-go"
 )
 
-// migrationSQL содержит SQL для создания таблицы memories с pgvector.
-// Дублирует migrations/001_create_memories.sql для удобства go:embed не позволяет ..
+// migrationSQL contains SQL for creating the memories table with pgvector.
+// Duplicates migrations/001_create_memories.sql for convenience (go:embed doesn't allow ..).
 const migrationSQL = `
 CREATE EXTENSION IF NOT EXISTS vector;
 
@@ -44,11 +44,11 @@ type PgStore struct {
 	pool *pgxpool.Pool
 }
 
-// NewPgStore создаёт новый PostgreSQL store.
+// NewPgStore creates a new PostgreSQL store.
 func NewPgStore(ctx context.Context, connString string) (*PgStore, error) {
 	config, err := pgxpool.ParseConfig(connString)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка разбора строки подключения: %w", err)
+		return nil, fmt.Errorf("connection string parse error: %w", err)
 	}
 
 	config.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
@@ -57,36 +57,36 @@ func NewPgStore(ctx context.Context, connString string) (*PgStore, error) {
 
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка подключения к PostgreSQL: %w", err)
+		return nil, fmt.Errorf("PostgreSQL connection error: %w", err)
 	}
 
-	// Проверяем соединение
+	// Check the connection
 	if err := pool.Ping(ctx); err != nil {
 		pool.Close()
-		return nil, fmt.Errorf("PostgreSQL недоступен: %w", err)
+		return nil, fmt.Errorf("PostgreSQL unavailable: %w", err)
 	}
 
-	log.Println("[PgStore] Подключено к PostgreSQL")
+	log.Println("[PgStore] Connected to PostgreSQL")
 	return &PgStore{pool: pool}, nil
 }
 
-// Migrate запускает SQL-миграцию (создание таблиц и индексов).
+// Migrate runs the SQL migration (creates tables and indexes).
 func (p *PgStore) Migrate(ctx context.Context) error {
 	_, err := p.pool.Exec(ctx, migrationSQL)
 	if err != nil {
-		return fmt.Errorf("ошибка миграции: %w", err)
+		return fmt.Errorf("migration error: %w", err)
 	}
-	log.Println("[PgStore] Миграция выполнена")
+	log.Println("[PgStore] Migration completed")
 	return nil
 }
 
-// Close закрывает пул соединений.
+// Close closes the connection pool.
 func (p *PgStore) Close() {
 	p.pool.Close()
 }
 
-// InsertMemory вставляет воспоминание в таблицу memories.
-// Если embedding == nil, запись создаётся с embedded=false для async обработки.
+// InsertMemory inserts a memory into the memories table.
+// If embedding is nil, the record is created with embedded=false for async processing.
 func (p *PgStore) InsertMemory(ctx context.Context, m *memory.Memory) error {
 	var embeddingVal interface{}
 	if len(m.Embedding) > 0 {
@@ -122,23 +122,23 @@ func (p *PgStore) InsertMemory(ctx context.Context, m *memory.Memory) error {
 	).Scan(&m.ID)
 
 	if err != nil {
-		return fmt.Errorf("ошибка вставки memory: %w", err)
+		return fmt.Errorf("memory insert error: %w", err)
 	}
 	return nil
 }
 
-// UpdateEmbedding обновляет вектор для записи (async pipeline).
+// UpdateEmbedding updates the vector for a record (async pipeline).
 func (p *PgStore) UpdateEmbedding(ctx context.Context, id int64, embedding []float32) error {
 	query := `UPDATE memories SET embedding = $1, embedded = TRUE WHERE id = $2`
 	_, err := p.pool.Exec(ctx, query, pgvector.NewVector(embedding), id)
 	if err != nil {
-		return fmt.Errorf("ошибка обновления embedding: %w", err)
+		return fmt.Errorf("embedding update error: %w", err)
 	}
 	return nil
 }
 
-// SearchSimilar ищет top-K похожих воспоминаний по cosine similarity.
-// Если sessionID пустой — ищет по всем сессиям.
+// SearchSimilar searches for the top-K most similar memories by cosine similarity.
+// If sessionID is empty, searches across all sessions.
 func (p *PgStore) SearchSimilar(ctx context.Context, embedding []float32, sessionID string, topK int) ([]*memory.Memory, error) {
 	var query string
 	var args []interface{}
@@ -169,7 +169,7 @@ func (p *PgStore) SearchSimilar(ctx context.Context, embedding []float32, sessio
 
 	rows, err := p.pool.Query(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка поиска memories: %w", err)
+		return nil, fmt.Errorf("memory search error: %w", err)
 	}
 	defer rows.Close()
 
@@ -181,7 +181,7 @@ func (p *PgStore) SearchSimilar(ctx context.Context, embedding []float32, sessio
 			&m.Location, &m.ActionType, &m.Embedded, &m.CreatedAt,
 			&m.Similarity,
 		); err != nil {
-			return nil, fmt.Errorf("ошибка сканирования memory: %w", err)
+			return nil, fmt.Errorf("memory scan error: %w", err)
 		}
 		results = append(results, m)
 	}
@@ -189,7 +189,7 @@ func (p *PgStore) SearchSimilar(ctx context.Context, embedding []float32, sessio
 	return results, rows.Err()
 }
 
-// PendingEmbeddings возвращает записи без эмбеддингов (для async пересчёта).
+// PendingEmbeddings returns records without embeddings (for async recalculation).
 func (p *PgStore) PendingEmbeddings(ctx context.Context, limit int) ([]*memory.Memory, error) {
 	query := `
 		SELECT id, session_id, turn_number, content, location, action_type, embedded, created_at
@@ -201,7 +201,7 @@ func (p *PgStore) PendingEmbeddings(ctx context.Context, limit int) ([]*memory.M
 
 	rows, err := p.pool.Query(ctx, query, limit)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка загрузки pending: %w", err)
+		return nil, fmt.Errorf("pending load error: %w", err)
 	}
 	defer rows.Close()
 
@@ -212,7 +212,7 @@ func (p *PgStore) PendingEmbeddings(ctx context.Context, limit int) ([]*memory.M
 			&m.ID, &m.SessionID, &m.TurnNumber, &m.Content,
 			&m.Location, &m.ActionType, &m.Embedded, &m.CreatedAt,
 		); err != nil {
-			return nil, fmt.Errorf("ошибка сканирования pending: %w", err)
+			return nil, fmt.Errorf("pending scan error: %w", err)
 		}
 		results = append(results, m)
 	}
@@ -220,7 +220,7 @@ func (p *PgStore) PendingEmbeddings(ctx context.Context, limit int) ([]*memory.M
 	return results, rows.Err()
 }
 
-// ForSession возвращает все воспоминания сессии.
+// ForSession returns all memories for a session.
 func (p *PgStore) ForSession(ctx context.Context, sessionID string) ([]*memory.Memory, error) {
 	query := `
 		SELECT id, session_id, turn_number, content, location, action_type, embedded, created_at
@@ -231,7 +231,7 @@ func (p *PgStore) ForSession(ctx context.Context, sessionID string) ([]*memory.M
 
 	rows, err := p.pool.Query(ctx, query, sessionID)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка загрузки memories сессии: %w", err)
+		return nil, fmt.Errorf("session memories load error: %w", err)
 	}
 	defer rows.Close()
 
@@ -242,7 +242,7 @@ func (p *PgStore) ForSession(ctx context.Context, sessionID string) ([]*memory.M
 			&m.ID, &m.SessionID, &m.TurnNumber, &m.Content,
 			&m.Location, &m.ActionType, &m.Embedded, &m.CreatedAt,
 		); err != nil {
-			return nil, fmt.Errorf("ошибка сканирования memory: %w", err)
+			return nil, fmt.Errorf("memory scan error: %w", err)
 		}
 		results = append(results, m)
 	}

@@ -1,6 +1,6 @@
 /**
- * Тёмный Монастырь — WebSocket Module
- * =====================================
+ * Dark Monastery — WebSocket Module
+ * ==================================
  * WebSocket connection, reconnection, message handling.
  * Depends on: window.GameState, window.DarkFX, window.GameUI
  */
@@ -84,7 +84,6 @@
   function sendAction(text) {
     if (!text.trim()) return;
 
-    FX.sendActionEffect();
     UI.addStoryEntry(text, false, true);
 
     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -115,7 +114,7 @@
         .catch(err => {
           GS.isThinking = false;
           UI.updateThinking(false);
-          UI.addStoryEntry('⚠ Ошибка соединения: ' + err.message, false, false, true);
+          UI.addStoryEntry('⚠ Connection error: ' + err.message, false, false, true);
         });
     }
 

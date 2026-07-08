@@ -13,11 +13,11 @@ import (
 	"dark-monastery/internal/storage"
 )
 
-// --- Обработчики игровых действий ---
+// --- Game action handlers ---
 
 func (s *Server) handleNewGame(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
+		http.Error(w, "Method not supported", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -35,16 +35,26 @@ func (s *Server) handleNewGame(w http.ResponseWriter, r *http.Request) {
 	s.sessions[sessionID] = sess
 	s.mu.Unlock()
 
+	// Auto-generate first narrative turn
+	newState, err := s.processActionWithMemory(r.Context(), sess, "START")
+	if err == nil {
+		sess.State = newState
+		sess.TurnCount++
+		if sess.Memory != nil {
+			sess.Memory.Add("START", newState.Message, newState.Location)
+		}
+	}
+
 	writeJSON(w, http.StatusCreated, map[string]interface{}{
 		"session_id": sessionID,
-		"state":      state,
-		"turn_count": 0,
+		"state":      sess.State,
+		"turn_count": sess.TurnCount,
 	})
 }
 
 func (s *Server) handleAction(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
+		http.Error(w, "Method not supported", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -53,12 +63,12 @@ func (s *Server) handleAction(w http.ResponseWriter, r *http.Request) {
 		Action    string `json:"action"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Невалидный JSON"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
 
 	if req.SessionID == "" || req.Action == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "session_id и action обязательны"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "session_id and action are required"})
 		return
 	}
 
@@ -67,27 +77,27 @@ func (s *Server) handleAction(w http.ResponseWriter, r *http.Request) {
 	s.mu.RUnlock()
 
 	if !ok {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Сессия не найдена"})
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Session not found"})
 		return
 	}
 
 	newState, err := s.processActionWithMemory(r.Context(), sess, req.Action)
 	if err != nil {
-		log.Printf("Ошибка AI: %v", err)
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Ошибка нейросети: " + err.Error()})
+		log.Printf("AI error: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "AI error: " + err.Error()})
 		return
 	}
 
 	sess.TurnCount++
 
-	// RAG: сохраняем в обе памяти
+	// RAG: save to both memories
 	if sess.Memory != nil {
 		sess.Memory.Add(req.Action, newState.Message, newState.Location)
 	}
 
 	sess.State = newState
 
-	// Автосохранение (файловое)
+	// Auto-save (file)
 	meta := &storage.SaveMeta{
 		SessionID:  req.SessionID,
 		PlayerName: game.DefaultPlayerName,
@@ -105,7 +115,7 @@ func (s *Server) handleAction(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
 	sessionID := r.URL.Query().Get("session_id")
 	if sessionID == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "session_id обязателен"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "session_id is required"})
 		return
 	}
 
@@ -114,7 +124,7 @@ func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
 	s.mu.RUnlock()
 
 	if !ok {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Сессия не найдена"})
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Session not found"})
 		return
 	}
 
@@ -124,14 +134,14 @@ func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// processActionWithMemory выполняет действие с RAG-контекстом.
-// Используется в handleAction и handleWebSocket.
+// processActionWithMemory performs an action with RAG context.
+// Used in handleAction and handleWebSocket.
 func (s *Server) processActionWithMemory(ctx context.Context, sess *Session, action string) (*game.GameState, error) {
-	// RAG: строим контекст памяти
+	// RAG: build memory context
 	if sess.Memory != nil {
 		memCtx, err := sess.Memory.BuildContext(ctx, action, sess.State.Location)
 		if err != nil {
-			log.Printf("[ProcessAction] Ошибка BuildContext: %v", err)
+			log.Printf("[ProcessAction] BuildContext error: %v", err)
 		}
 		if gemini, ok := s.engine.AIClient().(*ai.GeminiClient); ok {
 			gemini.SetMemoryContext(memCtx)

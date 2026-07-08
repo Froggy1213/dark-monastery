@@ -5,28 +5,28 @@ import (
 	"time"
 )
 
-// Memory — одно воспоминание, хранящееся в pgvector.
+// Memory — a single memory stored in pgvector.
 type Memory struct {
 	ID         int64     `json:"id"`
 	SessionID  string    `json:"session_id"`
 	TurnNumber int       `json:"turn_number"`
-	Content    string    `json:"content"`     // "Действие: X | Ответ: Y"
+	Content    string    `json:"content"`     // "Action: X | Response: Y"
 	Location   string    `json:"location"`
 	ActionType string    `json:"action_type"` // "turn", "lore", "quest", "death"
-	Embedding  []float32 `json:"-"`           // 768d вектор, не сериализуется в JSON
+	Embedding  []float32 `json:"-"`           // 768d vector, not serialized to JSON
 	Embedded   bool      `json:"embedded"`
 	CreatedAt  time.Time `json:"created_at"`
-	Similarity float32   `json:"similarity,omitempty"` // только при поиске
+	Similarity float32   `json:"similarity,omitempty"` // only during search
 }
 
-// EmbeddingProvider — интерфейс для генерации эмбеддингов.
-// Реализован в ai.EmbeddingClient (избегает циклического импорта).
+// EmbeddingProvider is an interface for generating embeddings.
+// Implemented in ai.EmbeddingClient (avoids circular import).
 type EmbeddingProvider interface {
 	Embed(ctx context.Context, text string) ([]float32, error)
 }
 
-// MemoryStore — интерфейс для хранения/поиска воспоминаний.
-// Реализован в storage.PgStore (избегает циклического импорта).
+// MemoryStore is an interface for storing/retrieving memories.
+// Implemented in storage.PgStore (avoids circular import).
 type MemoryStore interface {
 	InsertMemory(ctx context.Context, m *Memory) error
 	UpdateEmbedding(ctx context.Context, id int64, embedding []float32) error

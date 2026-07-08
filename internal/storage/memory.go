@@ -6,14 +6,14 @@ import (
 	"time"
 )
 
-// MemoryStore — in-memory хранилище игровых сессий.
+// MemoryStore is an in-memory storage for game sessions.
 type MemoryStore struct {
-	mu     sync.RWMutex
-	games  map[string][]byte // sessionID → JSON GameState
-	metas  map[string]*SaveMeta
+	mu    sync.RWMutex
+	games map[string][]byte // sessionID -> JSON GameState
+	metas map[string]*SaveMeta
 }
 
-// NewMemoryStore создаёт новое in-memory хранилище.
+// NewMemoryStore creates a new in-memory storage.
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
 		games: make(map[string][]byte),
@@ -21,7 +21,7 @@ func NewMemoryStore() *MemoryStore {
 	}
 }
 
-// Save сохраняет состояние игры в память.
+// Save saves the game state to memory.
 func (s *MemoryStore) Save(sessionID string, stateJSON []byte, meta *SaveMeta) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -31,18 +31,18 @@ func (s *MemoryStore) Save(sessionID string, stateJSON []byte, meta *SaveMeta) e
 	return nil
 }
 
-// Load загружает состояние игры из памяти.
+// Load loads the game state from memory.
 func (s *MemoryStore) Load(sessionID string) ([]byte, *SaveMeta, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	data, ok := s.games[sessionID]
 	if !ok {
-		return nil, nil, fmt.Errorf("сохранение %s не найдено", sessionID)
+		return nil, nil, fmt.Errorf("save %s not found", sessionID)
 	}
 	return data, s.metas[sessionID], nil
 }
 
-// List возвращает список всех сохранений.
+// List returns a list of all saves.
 func (s *MemoryStore) List() []*SaveMeta {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -53,7 +53,7 @@ func (s *MemoryStore) List() []*SaveMeta {
 	return result
 }
 
-// Delete удаляет сохранение.
+// Delete deletes a save.
 func (s *MemoryStore) Delete(sessionID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

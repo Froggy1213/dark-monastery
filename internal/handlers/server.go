@@ -11,7 +11,7 @@ import (
 	"dark-monastery/internal/storage"
 )
 
-// Server хранит все зависимости для HTTP API.
+// Server holds all dependencies for the HTTP API.
 type Server struct {
 	engine    *game.Engine
 	fileStore *storage.FileStore
@@ -19,13 +19,13 @@ type Server struct {
 	sessions  map[string]*Session
 	mu        sync.RWMutex
 
-	// RAG компоненты (nil если PostgreSQL недоступен)
+	// RAG components (nil if PostgreSQL is unavailable)
 	pgStore     *storage.PgStore
 	embedClient *ai.EmbeddingClient
 	extractor   *memory.Extractor
 }
 
-// Session — активная игровая сессия.
+// Session is an active game session.
 type Session struct {
 	State     *game.GameState       `json:"state"`
 	Memory    *memory.MemoryManager `json:"-"`
@@ -33,8 +33,8 @@ type Session struct {
 	CreatedAt time.Time             `json:"created_at"`
 }
 
-// NewServer создаёт новый HTTP сервер с игровым движком.
-// pgStore, embedClient, extractor могут быть nil — тогда используется legacy режим.
+// NewServer creates a new HTTP server with the game engine.
+// pgStore, embedClient, extractor can be nil — then legacy mode is used.
 func NewServer(
 	engine *game.Engine,
 	fileStore *storage.FileStore,
@@ -54,8 +54,8 @@ func NewServer(
 	}
 }
 
-// createMemoryManager создаёт MemoryManager для сессии.
-// Если RAG-компоненты недоступны, возвращает nil.
+// createMemoryManager creates a MemoryManager for a session.
+// If RAG components are unavailable, returns nil.
 func (s *Server) createMemoryManager(sessionID string) *memory.MemoryManager {
 	if s.pgStore == nil || s.embedClient == nil {
 		return nil
@@ -63,7 +63,7 @@ func (s *Server) createMemoryManager(sessionID string) *memory.MemoryManager {
 	return memory.NewMemoryManager(s.pgStore, s.embedClient, s.extractor, sessionID)
 }
 
-// RegisterRoutes регистрирует все эндпоинты на переданном ServeMux.
+// RegisterRoutes registers all endpoints on the given ServeMux.
 func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/game/new", s.handleNewGame)
 	mux.HandleFunc("/api/game/action", s.handleAction)
