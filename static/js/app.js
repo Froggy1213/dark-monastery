@@ -43,12 +43,12 @@
 
       // Grand entrance effect
       FX.particleBurst(window.innerWidth / 2, window.innerHeight / 2, {
-        count: 40,
-        color: { r: 200, g: 169, b: 110 },
-        speed: 3,
-        size: 2,
-        life: 80,
-        glow: true,
+        count: 26,
+        color: { r: 160, g: 158, b: 150 },
+        speed: 2.2,
+        size: 1.4,
+        life: 70,
+        glow: false,
       });
 
       WS.connect();

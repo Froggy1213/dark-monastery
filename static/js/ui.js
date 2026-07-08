@@ -47,91 +47,11 @@
       sanityEl.textContent = sanity;
       FX.flashStat('statSanity');
       const lower = sanity.toLowerCase();
-      if (lower.includes('нестабил') || lower.includes('тревож')) {
-        sanityIcon.textContent = '🜏';
-        sanityIcon.style.color = '#c0392b';
-      } else if (lower.includes('безум') || lower.includes('хаос')) {
-        sanityIcon.textContent = '☠';
-        sanityIcon.style.color = '#8b1a1a';
-      } else {
-        sanityIcon.textContent = '🜏';
-        sanityIcon.style.color = '';
-      }
-    }
-
-    // --- HP ---
-    const hp = state.hp ?? 0;
-    const maxHp = state.max_hp ?? 20;
-    const hpPct = maxHp > 0 ? Math.max(0, Math.min(100, (hp / maxHp) * 100)) : 100;
-    const hpBar = document.getElementById('hpBar');
-    const hpText = document.getElementById('hpText');
-
-    hpBar.style.width = hpPct + '%';
-    hpText.textContent = `${hp}/${maxHp}`;
-
-    if (prev) {
-      const prevHp = prev.hp ?? 0;
-      const hpDiff = hp - prevHp;
-
-      if (hpDiff < 0) {
-        FX.flashStat('hpText', 'damage');
-        FX.screenShake(Math.min(3, Math.abs(hpDiff) / 3));
-        FX.bloodVignette();
-
-        const hpRect = hpBar.getBoundingClientRect();
-        FX.floatingNumber(hpRect.left + hpRect.width / 2, hpRect.top, hpDiff.toString(), 'damage');
-
-        FX.particleBurst(hpRect.left + hpRect.width * (hpPct / 100), hpRect.top + hpRect.height / 2, {
-          count: Math.min(30, Math.abs(hpDiff) * 3),
-          color: { r: 180, g: 30, b: 30 },
-          speed: 2,
-          size: 2,
-          life: 50,
-        });
-
-        if (hpPct <= 25) {
-          hpBar.style.boxShadow = '0 0 20px rgba(192, 57, 43, 0.6)';
-        }
-      } else if (hpDiff > 0) {
-        FX.flashStat('hpText', 'heal');
-        FX.healGlow();
-
-        const hpRect = hpBar.getBoundingClientRect();
-        FX.floatingNumber(hpRect.left + hpRect.width / 2, hpRect.top, '+' + hpDiff, 'heal');
-
-        FX.particleRise(hpRect.left + hpRect.width / 2, hpRect.top, {
-          count: 10,
-          color: { r: 74, g: 160, b: 58 },
-          size: 1.5,
-          life: 60,
-        });
-
-        hpBar.style.boxShadow = '';
-      }
-    }
-
-    // --- Mana ---
-    const mana = state.mana ?? 0;
-    const maxMana = 100;
-    const manaPct = Math.max(0, Math.min(100, (mana / maxMana) * 100));
-    const manaBar = document.getElementById('manaBar');
-    const manaText = document.getElementById('manaText');
-
-    manaBar.style.width = manaPct + '%';
-    manaText.textContent = mana;
-
-    if (prev && (prev.mana ?? 0) !== mana) {
-      FX.flashStat('manaText');
-      if (mana > (prev.mana ?? 0)) {
-        const mRect = manaBar.getBoundingClientRect();
-        FX.particleBurst(mRect.left + mRect.width / 2, mRect.top + mRect.height / 2, {
-          count: 8,
-          color: { r: 58, g: 120, b: 200 },
-          speed: 1,
-          size: 1.5,
-          life: 40,
-          glow: true,
-        });
+      sanityIcon.className = 'sanity-dot';
+      if (lower.includes('безум') || lower.includes('хаос') || lower.includes('грани')) {
+        sanityIcon.classList.add('sanity-dot--broken');
+      } else if (lower.includes('нестабил') || lower.includes('тревог') || lower.includes('паран')) {
+        sanityIcon.classList.add('sanity-dot--frayed');
       }
     }
 

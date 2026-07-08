@@ -88,24 +88,24 @@
     }
   }
 
-  // --- Ambient particle spawner ---
+  // --- Ambient particle spawner: редкая пыль, оседающая сверху ---
   let spawnTimer = 0;
-  const AMBIENT_SPAWN_RATE = 8; // frames between spawns
+  const AMBIENT_SPAWN_RATE = 26; // frames between spawns
 
   function spawnAmbientParticle() {
     particles.push(new Particle({
       x: Math.random() * canvas.width,
-      y: canvas.height + 5,
-      size: Math.random() * 1.5 + 0.3,
-      speedY: -(Math.random() * 0.4 + 0.15),
-      speedX: (Math.random() - 0.5) * 0.2,
-      life: Math.random() * 400 + 200,
+      y: -6,
+      size: Math.random() * 1.1 + 0.3,
+      speedY: Math.random() * 0.22 + 0.07,
+      speedX: (Math.random() - 0.5) * 0.12,
+      life: Math.random() * 500 + 300,
       color: {
-        r: 180 + Math.random() * 40,
-        g: 100 + Math.random() * 70,
-        b: 30 + Math.random() * 40,
+        r: 135 + Math.random() * 25,
+        g: 133 + Math.random() * 25,
+        b: 128 + Math.random() * 22,
       },
-      glow: Math.random() > 0.7,
+      glow: false,
     }));
   }
 
@@ -377,12 +377,12 @@
     // Particle burst from input
     const rect = btn.getBoundingClientRect();
     particleBurst(rect.left + rect.width / 2, rect.top + rect.height / 2, {
-      count: 12,
-      color: { r: 200, g: 169, b: 110 },
-      speed: 1.5,
-      size: 1.5,
-      life: 40,
-      glow: true,
+      count: 8,
+      color: { r: 165, g: 162, b: 155 },
+      speed: 1.2,
+      size: 1.2,
+      life: 35,
+      glow: false,
     });
   }
 
@@ -398,12 +398,12 @@
           rect.left + rect.width / 2,
           rect.top + rect.height / 2,
           {
-            count: 6,
-            color: { r: 200, g: 169, b: 110 },
-            speed: 0.8,
-            size: 1,
-            life: 30,
-            glow: true,
+            count: 4,
+            color: { r: 150, g: 148, b: 142 },
+            speed: 0.6,
+            size: 0.9,
+            life: 26,
+            glow: false,
           }
         );
       });
@@ -429,10 +429,11 @@
     title.addEventListener('mouseenter', () => {
       const rect = title.getBoundingClientRect();
       particleRise(rect.left + rect.width / 2, rect.top + rect.height, {
-        count: 20,
-        color: { r: 200, g: 169, b: 110 },
-        size: 1.5,
-        life: 60,
+        count: 10,
+        color: { r: 150, g: 148, b: 142 },
+        size: 1.1,
+        life: 50,
+        glow: false,
       });
     });
   }

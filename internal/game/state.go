@@ -8,9 +8,6 @@ const DefaultPlayerName = "Игрок"
 type GameState struct {
 	Condition      string   `json:"condition"`
 	Sanity         string   `json:"sanity"`          // Уровень рассудка
-	HP             int      `json:"hp"`              // Очки здоровья
-	MaxHP          int      `json:"max_hp"`          // Максимальное здоровье
-	Mana           int      `json:"mana"`            // Очки маны
 	Inventory      []string `json:"inventory"`       // Список предметов
 	Equipped       string   `json:"equipped"`        // Что сейчас в руках
 	Gold           int      `json:"gold"`            // Валюта
@@ -28,9 +25,6 @@ func NewPlayer() *GameState {
 	return &GameState{
 		Condition:      "Здоров",
 		Sanity:         "Стабильный",
-		HP:             20,
-		MaxHP:          20,
-		Mana:           0,
 		Inventory:      []string{"Фляга с водой", "Огниво"},
 		Equipped:       "Кулаки",
 		Gold:           0,
